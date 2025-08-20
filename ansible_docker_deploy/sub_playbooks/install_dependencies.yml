@@ -1,0 +1,71 @@
+- name: Setup Git, Docker, Docker Compose and a new Docker network
+  hosts: docker_server
+  become: true
+  tasks:
+
+    - name: Update apt
+      apt:
+        update_cache: yes
+
+    - name: Git installation
+      block:
+        - name: Install Git
+          become: yes
+          ansible.builtin.apt:
+            name: git
+            state: present
+            update_cache: yes
+
+        - name: Verify Git version
+          ansible.builtin.command: git --version
+          register: git_version
+          changed_when: false
+
+    - name: Docker installation
+      block:
+        - name: Install Docker
+          apt:
+            name: docker.io
+            state: present
+
+        - name: Ensure docker is running
+          service:
+            name: docker
+            state: started
+            enabled: true
+
+        - name: Add ubuntu to docker group
+          ansible.builtin.user:
+            name: ubuntu
+            groups: docker
+            append: yes
+
+    - name: Install Docker Compose V2 plugin
+      become: yes
+      block:
+        - name: Add Docker GPG apt key
+          ansible.builtin.apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker APT repository
+          ansible.builtin.apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+
+        - name: Install Docker Compose V2 plugin
+          ansible.builtin.apt:
+            name: docker-compose-plugin
+            state: present
+
+        - name: Verify Docker Compose V2 installed
+          ansible.builtin.command: docker compose version
+          register: compose_version
+          changed_when: false
+          failed_when: compose_version.rc != 0
+
+    - name: Create a Docker network
+      community.docker.docker_network:
+        name: myretirement_docker_network
+        state: present
+        driver: bridge

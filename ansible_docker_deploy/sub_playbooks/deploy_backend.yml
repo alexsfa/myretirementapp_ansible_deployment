@@ -1,0 +1,50 @@
+---
+- name: deploy django api with docker
+  hosts: docker_server
+  vars_files:
+    - ./vars/deploy_backend_vars.yml 
+
+  tasks:
+
+    - block:
+
+        - name: Write decrypted private key to temporary file
+          copy:
+            content: "{{ github_backend_priv_key | replace('\\n', '\n') }}"
+            dest: /tmp/github_key
+            mode: '0600'
+
+        - name: Clone private repo
+          git:
+            repo: 'git@github.com:alexsfa/myretirement_api.git'
+            dest: /home/ubuntu/myretirement_api
+            key_file: /tmp/github_key
+            version: main
+            force: yes
+            accept_hostkey: yes
+
+      always:
+        - name: Remove temporary private key
+          file:
+            path: /tmp/github_key
+            state: absent
+
+    - name: Generate .env file from template
+      template:
+        src: env.j2
+        dest: /home/ubuntu/myretirement_api/.env
+
+    - name: Add DJANGO_ALLOWED_HOSTS field to the .env file
+      ansible.builtin.lineinfile:
+        path: /home/ubuntu/myretirement_api/.env
+        line: 'DJANGO_ALLOWED_HOSTS=50.16.130.150'
+        create: yes
+        state: present
+
+    - name: Start backend services
+      ansible.builtin.shell: docker compose -f docker-compose-deploy.yml up -d
+      args: 
+        chdir: /home/ubuntu/myretirement_api
+        
+    
+
