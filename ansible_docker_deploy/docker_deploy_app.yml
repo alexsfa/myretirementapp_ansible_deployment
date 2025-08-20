@@ -1,0 +1,4 @@
+---
+- import_playbook: ./sub_playbooks/launch_ec2.yml
+- import_playbook: ./sub_playbooks/install_dependencies.yml
+- import_playbook: ./sub_playbooks/deploy_backend.yml
