@@ -1,8 +1,4 @@
-- name: Setup Git, Docker, Docker Compose and a new Docker network
-  hosts: docker_server
-  become: true
-  tasks:
-
+---
     - name: Update apt
       apt:
         update_cache: yes
@@ -10,7 +6,6 @@
     - name: Git installation
       block:
         - name: Install Git
-          become: yes
           ansible.builtin.apt:
             name: git
             state: present
@@ -39,10 +34,15 @@
             name: ubuntu
             groups: docker
             append: yes
+          notify: Reconnect after adding user to docker group
 
     - name: Install Docker Compose V2 plugin
-      become: yes
       block:
+
+        - name: Gather facts from remote host
+          ansible.builtin.setup:
+            filter: ansible_distribution_release
+
         - name: Add Docker GPG apt key
           ansible.builtin.apt_key:
             url: https://download.docker.com/linux/ubuntu/gpg
@@ -69,3 +69,5 @@
         name: myretirement_docker_network
         state: present
         driver: bridge
+
+
