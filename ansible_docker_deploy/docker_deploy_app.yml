@@ -1,4 +1,31 @@
 ---
-- import_playbook: ./sub_playbooks/launch_ec2.yml
-- import_playbook: ./sub_playbooks/install_dependencies.yml
-- import_playbook: ./sub_playbooks/deploy_backend.yml
+- name: Launch EC2
+  hosts: localhost
+  gather_facts: no
+  environment:
+    AWS_DEFAULT_REGION: us-east-1d
+  tasks:
+    - import_tasks: ./sub_playbooks/launch_ec2.yml
+
+- name: Deploy backend on EC2
+  hosts: docker_server
+  become: true
+  tasks:
+    - import_tasks: ./sub_playbooks/install_dependencies.yml
+  handlers:
+    - name: Reconnect after adding user to docker group
+      meta: reset_connection
+
+- name: Deploy backend on Docker host
+  hosts: docker_server
+  vars_files:
+    - ./sub_playbooks/vars/deploy_backend_vars.yml
+  tasks:
+    - import_tasks: ./sub_playbooks/deploy_backend.yml
+
+- name: Deploy frontend on EC2
+  hosts: docker_server
+  vars_files:
+    - ./sub_playbooks/vars/deploy_frontend_vars.yml
+  tasks:
+    - import_tasks: ./sub_playbooks/deploy_frontend.yml          

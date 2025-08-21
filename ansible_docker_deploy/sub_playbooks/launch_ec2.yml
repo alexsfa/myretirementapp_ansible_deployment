@@ -1,9 +1,4 @@
 ---
-- name: Launch Docker host
-  hosts: localhost
-  connection: local
-  gather_facts: no
-  tasks:
 
     # Gets the current public IP of the localhost
     - name: Get currennt public IP
@@ -11,11 +6,17 @@
         url: https://api.ipify.org
         return_content: yes
       register: my_ip
+    
+
+    - name: Get public IP of the system's ssh client
+      ansible.builtin.shell: echo $SSH_CLIENT | awk '{print $1}'
+      register: ssh_client_ip
 
     # Creates a new key pair and defines the keyout variable with the private key's value
     - name: Create key pair for the instance
       ec2_key:
         name: docker-host-key
+        region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
       register: keyout
 
     # Saves the key to a .pem file if the value of the key
@@ -32,7 +33,7 @@
         name: "Docker-sg"
         description: "Security group for the Docker host"
         vpc_id: vpc-0a939c19442ae9cf8
-        region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+        region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
         rules:
 
           # access for control_vm
@@ -49,7 +50,7 @@
           - proto: tcp
             from_port: 8000
             to_port: 8000
-            cidr_ip: "85.73.70.239/32"
+            cidr_ip: "{{ ssh_client_ip.stdout }}/32"
         
         state: present
       register: security_group
@@ -73,6 +74,10 @@
         tags:
           Environment: Docker
       register: ec2
+
+    - name: Save EC2 instance's IP as fact
+      set_fact:
+        docker_host_ip: "{{ ec2.instances[0].public_ip_address }}"
 
     - name: Add the EC2 instance on inventory
       add_host:
