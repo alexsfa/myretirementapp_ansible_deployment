@@ -3,7 +3,7 @@
 
         - name: Write decrypted private key to temporary file
           copy:
-            content: "{{ github_frontend_priv_key | replace('\\n', '\n') }}"
+            content: "{{ github_frontend_priv_key }}"
             dest: /tmp/github_key
             mode: '0600'
 
@@ -22,17 +22,21 @@
             path: /tmp/github_key
             state: absent
 
-    - name: Create .env.prod with a single line
+    - name: Create .env
       copy:
-        dest: /home/ubuntu/myretirement/.env.prod
-        content: |
-          VITE_API_URL=/api/
+        src: templates/frontend/env.j2
+        dest: "{{ dev_environment | ternary('/home/ubuntu/myretirement/.env.dev', '/home/ubuntu/myretirement/.env.prod') }}"
         owner: ubuntu
         group: docker
         mode: '0644'
 
     - name: Start frontend services
-      ansible.builtin.shell: docker compose --profile prod --env-file .env.prod up -d
+      ansible.builtin.shell: >
+        docker compose --profile "{{ dev_environment | ternary('dev', 'prod') }}"
+        --env-file ".env.{{ dev_environment | ternary('dev', 'prod') }}" up -d 
       args:
         chdir: /home/ubuntu/myretirement
+
+  
+     
 

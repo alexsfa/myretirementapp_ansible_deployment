@@ -24,20 +24,25 @@
 
     - name: Generate .env file from template
       template:
-        src: env.j2
-        dest: /home/ubuntu/myretirement_api/.env.prod
+        src: .templates/backend/env.j2
+        dest: "{{ dev_environment | ternary('/home/ubuntu/myretirement_api/.env.dev', '/home/ubuntu/myretirement_api/.env.prod') }}"
 
     - name: Add DJANGO_ALLOWED_HOSTS field to the .env file
       ansible.builtin.lineinfile:
-        path: /home/ubuntu/myretirement_api/.env.prod
-        line: "DJANGO_ALLOWED_HOSTS={{ hostvars['localhost']['docker_host_ip'] }}"
+        path: "{{ dev_environment | ternary('/home/ubuntu/myretirement_api/.env.dev', '/home/ubuntu/myretirement_api/.env.prod') }}" 
+        line: "{{ dev_environment | ternary(
+                    'DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1'
+                    'DJANGO_ALLOWED_HOSTS=' ~ hostvars['localhost'][docker_host_ip]
+                  ) }}"
         create: yes
         state: present
 
     - name: Start backend services
-      ansible.builtin.shell: docker compose --profile prod --env-file .env.prod up -d
-      args: 
+      ansible.builtin.shell: >
+        docker compose --profile "{{ dev_environment | ternary('dev', 'prod') }}"
+        --env-file ".env.{{ dev_environment | ternary('dev', 'prod') }}" up -d
+      args:
         chdir: /home/ubuntu/myretirement_api
-        
+
     
 
