@@ -42,14 +42,14 @@
             to_port: 22
             cidr_ip: "{{ my_ip.content }}/32"
           - proto: tcp
-            from_port: 8000
-            to_port: 8000
+            from_port: 80
+            to_port: 80
             cidr_ip: "{{ my_ip.content }}/32"
 
           # access for my browser
           - proto: tcp
-            from_port: 8000
-            to_port: 8000
+            from_port: 80
+            to_port: 80
             cidr_ip: "{{ ssh_client_ip.stdout }}/32"
         
         state: present

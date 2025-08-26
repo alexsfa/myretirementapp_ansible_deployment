@@ -16,16 +16,17 @@
     - name: Reconnect after adding user to docker group
       meta: reset_connection
 
+- name: Deploy frontend on EC2
+  hosts: docker_server
+  vars_files:
+    - ./sub_playbooks/vars/deploy_frontend_vars.yml
+  tasks:
+    - import_tasks: ./sub_playbooks/deploy_frontend.yml       
+
 - name: Deploy backend on Docker host
   hosts: docker_server
   vars_files:
     - ./sub_playbooks/vars/deploy_backend_vars.yml
   tasks:
     - import_tasks: ./sub_playbooks/deploy_backend.yml
-
-- name: Deploy frontend on EC2
-  hosts: docker_server
-  vars_files:
-    - ./sub_playbooks/vars/deploy_frontend_vars.yml
-  tasks:
-    - import_tasks: ./sub_playbooks/deploy_frontend.yml          
+   

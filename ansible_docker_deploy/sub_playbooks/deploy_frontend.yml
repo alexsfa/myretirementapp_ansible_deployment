@@ -10,7 +10,7 @@
         - name: Clone private repo
           git:
             repo: 'git@github.com:alexsfa/myretirement_gui.git'
-            dest: /home/ubuntu/myretirement_gui
+            dest: /home/ubuntu/myretirement
             key_file: /tmp/github_key
             version: main
             force: yes
@@ -22,20 +22,17 @@
             path: /tmp/github_key
             state: absent
 
-              #- name: Generate .env file from template
-              #template:
-              #src: env.j2
-              #dest: /home/ubuntu/myretirement_api/.env
+    - name: Create .env.prod with a single line
+      copy:
+        dest: /home/ubuntu/myretirement/.env.prod
+        content: |
+          VITE_API_URL=/api/
+        owner: ubuntu
+        group: docker
+        mode: '0644'
 
-              #- name: Add DJANGO_ALLOWED_HOSTS field to the .env file
-              #ansible.builtin.lineinfile:
-              #path: /home/ubuntu/myretirement_api/.env
-              #line: 'DJANGO_ALLOWED_HOSTS=50.16.130.150'
-              #create: yes
-              #state: present
-
-              #- name: Start backend services
-              #ansible.builtin.shell: docker compose -f docker-compose-deploy.yml up -d
-              #args:
-              #chdir: /home/ubuntu/myretirement_api
+    - name: Start frontend services
+      ansible.builtin.shell: docker compose --profile prod --env-file .env.prod up -d
+      args:
+        chdir: /home/ubuntu/myretirement
 
