@@ -7,7 +7,7 @@
   tasks:
     - import_tasks: ./sub_playbooks/launch_ec2.yml
 
-- name: Deploy backend on EC2
+- name: Install dependencies for the deployment
   hosts: docker_server
   become: true
   tasks:
@@ -29,4 +29,10 @@
     - ./sub_playbooks/vars/deploy_backend_vars.yml
   tasks:
     - import_tasks: ./sub_playbooks/deploy_backend.yml
+
+- name: Handle domain configuration
+  hosts: docker_server
+  tasks:
+    - import_tasks: ./sub_playbooks/domain_config.yml
+  when: not dev_environment
    

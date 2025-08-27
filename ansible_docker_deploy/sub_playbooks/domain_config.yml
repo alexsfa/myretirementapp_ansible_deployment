@@ -1,0 +1,16 @@
+---
+- name: Create A record via GoDaddy API
+  uri:
+    url: "https://api.godaddy.com/v1/domains/myretirement.online/records/A/@"
+    method: PUT
+    headers:
+      Authorization: "sso-key {{ godaddy_api_key }}:{{ godaddy_api_secret }}"
+      Content-Type: "application/json"
+    body: |
+      [
+        {
+          "data": "{{ hostvars['localhost']['docker_host_ip'] }}",
+          "ttl":600
+        }
+      ]
+    body_format: json
