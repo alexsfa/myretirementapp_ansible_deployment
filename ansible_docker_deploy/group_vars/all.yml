@@ -1,2 +1,4 @@
 ---
 dev_environment: false
+domain_name: "myretirement.click"
+hosted_zone: "Z05687793P8X7SBEFXV4D"

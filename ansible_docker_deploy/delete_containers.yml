@@ -1,0 +1,20 @@
+--- 
+  - name: Stop and delete docker_server containers
+    hosts: docker_server
+    gather_facts: false
+    tasks:
+
+      - name: Stop and remove all backend services
+        community.docker.docker_compose_v2:
+          project_src: "/home/ubuntu/myretirement_api"
+          state: absent
+        environment:
+          DOCKER_HOST: "ssh://{{ ansible_user }}@{{ inventory_hostname }}"
+
+      - name: Stop and remove all frontend services
+        community.docker.docker_compose_v2:
+          project_src: "/home/ubuntu/myretirement"
+          state: absent
+        environment:
+          DOCKER_HOST: "ssh://{{ ansible_user }}@{{ inventory_hostname }}"
+      

@@ -30,11 +30,15 @@
     - name: Add DJANGO_ALLOWED_HOSTS field to the .env file
       ansible.builtin.lineinfile:
         path: "{{ dev_environment | ternary('/home/ubuntu/myretirement_api/.env.dev', '/home/ubuntu/myretirement_api/.env.prod') }}" 
-        line: DJANGO_ALLOWED_HOSTS={{ hostvars['localhost']['docker_host_ip'] }},localhost,127.0.0.1
+        line: >-
+              {{ dev_environment | ternary(
+                  'DJANGO_ALLOWED_HOSTS='~ hostvars['localhost']['docker_host_ip'] ~',localhost,127.0.0.1',
+                   'DJANGO_ALLOWED_HOSTS=myretirement.click, 127.0.0.1'
+               ) }}
         create: yes
         state: present
 
-    - name: Add CORS_ALLOWED_ORIGINS field to the .env file
+    - name: Add CORS_ALLOWED_ORIGINS field to the .env file 
       ansible.builtin.lineinfile:
         path: "{{ dev_environment | ternary('/home/ubuntu/myretirement_api/.env.dev', '/home/ubuntu/myretirement_api/.env.prod') }}"
         line: CORS_ALLOWED_ORIGINS=http://{{ hostvars['localhost']['docker_host_ip'] }}:5173,http://localhost:5173

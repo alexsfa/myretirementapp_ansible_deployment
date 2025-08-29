@@ -16,12 +16,70 @@
           register: git_version
           changed_when: false
 
+    - name: Certbot and nginx plugin installation
+      block:
+
+        - name: Install Certbot and Nginx plugin
+          ansible.builtin.apt:
+            name:
+              - certbot
+              - python3-certbot-nginx
+            state: present
+            update_cache: yes
+        
+        - name: Verify Certbot is installed
+          ansible.builtin.command: certbot --version
+          register: certbot_version
+          changed_when: false
+          ignore_errors: yes
+
+
+    - name: Certibox nginx plugin verification
+      block:
+
+        - name: Verify Certbot Nginx plugin
+          ansible.builtin.command: certbot plugins
+          register: certbot_plugins
+
+        - name: Show if nginx plugin is available
+          ansible.builtin.debug:
+            msg: "{{ certbot_plugins.stdout_lines | select('search', 'nginx') | list }}"
+
+        - name: Stop nginx if running
+          ansible.builtin.service:
+           name: nginx
+           state: stopped
+
+        - name: Disable nginx from starting at boot
+          ansible.builtin.service:
+            name: nginx
+            enabled: no
+
     - name: Docker installation
       block:
+
+        - name: Add Docker GPG key (via apt_key)
+          ansible.builtin.apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker GPG key and APT repository
+          ansible.builtin.apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+            state: present
+            filename: docker
+            update_cache: yes
+
+
         - name: Install Docker
           apt:
-            name: docker.io
+            name: 
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-buildx-plugin
             state: present
+            update_cache: yes
 
         - name: Ensure docker is running
           service:
@@ -38,20 +96,6 @@
 
     - name: Install Docker Compose V2 plugin
       block:
-
-        - name: Gather facts from remote host
-          ansible.builtin.setup:
-            filter: ansible_distribution_release
-
-        - name: Add Docker GPG apt key
-          ansible.builtin.apt_key:
-            url: https://download.docker.com/linux/ubuntu/gpg
-            state: present
-
-        - name: Add Docker APT repository
-          ansible.builtin.apt_repository:
-            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-            state: present
 
         - name: Install Docker Compose V2 plugin
           ansible.builtin.apt:

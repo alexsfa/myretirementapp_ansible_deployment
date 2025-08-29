@@ -4,6 +4,8 @@
   gather_facts: no
   environment:
     AWS_DEFAULT_REGION: us-east-1d
+  vars_files:
+    - ./sub_playbooks/vars/aws_credentials.yml
   tasks:
     - import_tasks: ./sub_playbooks/launch_ec2.yml
 
@@ -27,12 +29,14 @@
   hosts: docker_server
   vars_files:
     - ./sub_playbooks/vars/deploy_backend_vars.yml
+    - ./sub_paybooks/vars/aws_credentials.yml
   tasks:
     - import_tasks: ./sub_playbooks/deploy_backend.yml
 
 - name: Handle domain configuration
   hosts: docker_server
+  become: true
   tasks:
     - import_tasks: ./sub_playbooks/domain_config.yml
-  when: not dev_environment
+      when: not dev_environment
    

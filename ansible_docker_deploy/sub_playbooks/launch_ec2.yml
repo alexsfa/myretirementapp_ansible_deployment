@@ -107,6 +107,19 @@
           Environment: Docker
       register: ec2
 
+    - name: Create A record for domain in Route 53
+      amazon.aws.route53:
+        zone: "myretirement.click."
+        record: "myretirement.click"
+        type: A
+        value: "{{ ec2.instances[0].public_ip_address }}"
+        ttl: 300
+        state: present
+        overwrite: true
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_credentials.aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_credentials.aws_secret_access_key }}"
+
     - name: Save EC2 instance's IP as fact
       set_fact:
         docker_host_ip: "{{ ec2.instances[0].public_ip_address }}"
@@ -125,10 +138,7 @@
         dest: "./inventory_docker.ini"
         content: |
           [docker_server]
-          {{ ec2.instances[0].public_ip_address }} 
-          ansible_user=ubuntu 
-          ansible_ssh_private_key_file={{ lookup('env','HOME') }}/.ssh/docker-server-key.pem
-          ansible_ssh_common_args='-o StritHostKeyChecking=no'
+          {{ ec2.instances[0].public_ip_address }} ansible_user=ubuntu ansible_ssh_private_key_file={{ lookup('env','HOME') }}/.ssh/docker-server-key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 
     - name: Wait for SSH connection
       ansible.builtin.wait_for:
