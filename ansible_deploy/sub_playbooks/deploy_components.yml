@@ -1,0 +1,6 @@
+---
+- name: Deploy the components of myretirementapp
+  hosts: localhost
+  gather_facts: no
+
+- import_playbook: ./deployment_playbooks/deploy_vue_frontend.yml

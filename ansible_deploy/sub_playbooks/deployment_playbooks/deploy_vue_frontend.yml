@@ -1,0 +1,60 @@
+---
+- name: Deploy the vue frontend component of the app
+  hosts: vue_servers
+  vars_files:
+  - ../vars/deploy_frontend_vars.yml
+  tasks:
+  
+    - name: Clone git repo of Vue frontend
+      block:
+
+        - name: Write decrypted private key to temporary file
+          copy:
+            content: "{{ github_frontend_priv_key }}"
+            dest: /tmp/github_frontend_key
+            mode: '0600'
+
+        - name: Clone private repo
+          git:
+            repo: 'git@github.com:alexsfa/myretirement_gui.git'
+            dest: /home/ubuntu/myretirement
+            key_file: /tmp/github_frontend_key
+            version: main
+            force: yes
+            accept_hostkey: yes
+
+      always:
+        - name: Remove temporary private key
+          file:
+            path: /tmp/github_frontend_key
+            state: absent
+  
+    - name: Create .env and enter the VITE_API_URL
+      ansible.builtin.lineinfile:
+        path: "{{ dev_environment | ternary('/home/ubuntu/myretirement/.env.dev',
+                                            '/home/ubuntu/myretirement/.env.prod') }}"
+        line: "{{ dev_environment | ternary('VITE_API_URL='~ hostvars['localhost'].vue_host_ip,
+                                            'VITE_API_URL=/api/') }}"
+        create: yes
+        state: present
+      
+    - name: Give ubuntu rwx access on the vue log file
+      become: yes
+      file:
+        path: /var/log
+        owner: ubuntu
+        mode: '0700'
+        
+    - name: Install Vue app dependencies from package.json
+      community.general.npm:
+        path: /home/ubuntu/myretirement
+
+    - name: Start frontend services in background
+      ansible.builtin.shell: npm run dev -- --host 0.0.0.0 --port 5173
+      args:
+        chdir: /home/ubuntu/myretirement
+      become: yes
+      become_user: ubuntu
+      async: 3600   
+      poll: 0      
+  

@@ -1,0 +1,30 @@
+---
+- name: Deploy the Django API component of the app
+  hosts: django_servers
+  vars_files:
+  - ../vars/deploy_backend_vars.yml
+  tasks:
+  
+  - name: Clone git repo of Django API backend
+    block:
+
+      - name: Write decrypted private key to temporary file
+        copy:
+          content: "{{ github_backend_priv_key }}"
+          dest: /tmp/github_backend_key
+          mode: '0600'
+
+      - name: Clone private repo
+        git:
+          repo: 'git@github.com:alexsfa/myretirement_api.git'
+          dest: /home/ubuntu/myretirement_api
+          key_file: /tmp/github_backend_key
+          version: main
+          force: yes
+          accept_hostkey: yes
+
+    always:
+      - name: Remove temporary private key
+        file:
+          path: /tmp/github_backend_key
+          state: absent

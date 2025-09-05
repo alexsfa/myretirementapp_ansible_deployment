@@ -1,0 +1,68 @@
+---
+- name: Install and configure all the prerequirements on the MySQL host
+  hosts: mysql_servers
+  become: yes
+  vars_files:
+    - ../vars/deploy_backend_vars.yml
+  tasks:
+  
+    - name: Update apt
+      apt:
+        update_cache: yes
+        
+    - name: Install MySQL and verify that is running
+      block:
+          
+        - name: Install MySQL
+          package:
+            name: "{{ item }}"
+            state: present
+          loop:
+            - mysql-server
+            - python3-pymysql  # required for Ansible MySQL modules
+        
+        - name: Ensure MySQL service is running
+          service:
+            name: mysql
+            state: started
+            enabled: yes
+          
+    - name: Configure MySQL
+      block:
+      
+        - name: Create admin user for Ansible
+          mysql_user:
+            name: "{{ backend_dev_env_vars.DB_ADMIN_NAME }}"
+            password: "{{ backend_dev_env_vars.DB_ADMIN_PASS }}"
+            priv: "*.*:ALL,GRANT"
+            state: present
+            login_unix_socket: /var/run/mysqld/mysqld.sock
+            
+        - name: Create application db
+          mysql_db:
+            name: "{{ item }}"
+            state: present
+            login_user: "{{ backend_dev_env_vars.DB_ADMIN_NAME }}"
+            login_password: "{{ backend_dev_env_vars.DB_ADMIN_PASS }}"
+          loop:
+            - "{{ backend_dev_env_vars.DB_NAME }}"
+            - "test_{{ backend_dev_env_vars.DB_NAME }}"
+            
+        - name: Create application user
+          mysql_user:
+            name: "{{ backend_dev_env_vars.DB_USER }}"
+            host: "%"
+            password: "{{ backend_dev_env_vars.DB_PASS }}"
+            priv: "{{ backend_dev_env_vars.DB_NAME }}.*:ALL, test_{{ backend_dev_env_vars.DB_NAME }}.*:ALL"
+            state: present
+            login_user: "{{ backend_dev_env_vars.DB_ADMIN_NAME }}"
+            login_password: "{{ backend_dev_env_vars.DB_ADMIN_PASS }}"
+
+        
+        
+      
+
+        
+    
+  
+    

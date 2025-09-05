@@ -1,0 +1,42 @@
+---
+- name: Install all the prerequirements on the Vue host
+  hosts: vue_servers
+  become: yes
+  tasks:
+    
+    - name: Update apt
+      apt:
+        update_cache: yes
+        
+    - name: Ensure required packages are installed
+      apt:
+        name:
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+        
+    - name: Install Node.js and verify installation
+      block:
+      
+        - name: Add NodeSource APT repository for Node.js LTS
+          shell: curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+          args:
+            executable: /bin/bash
+            
+        - name: Install Node.js (includes npm)
+          apt:
+            name: nodejs
+            state: present
+            
+        - name: Verify Node.js installation
+          ansible.builtin.command: node -v
+          changed_when: false
+          
+        - name: Verify npm installation
+          ansible.builtin.command: npm -v
+          changed_when: false
+          
+    
+            
+    

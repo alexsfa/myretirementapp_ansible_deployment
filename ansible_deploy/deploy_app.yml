@@ -26,3 +26,5 @@
         ssh_client_ip: "{{ ssh_client_ip.stdout }}"
         
 - import_playbook: ./sub_playbooks/create_aws_infra.yml
+- import_playbook: ./sub_playbooks/config_hosts.yml
+# - import_playbook: ./sub_playbooks/deploy_components.yml

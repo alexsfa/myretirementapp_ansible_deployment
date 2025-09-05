@@ -13,7 +13,6 @@
 
         - name: Verify Git version
           ansible.builtin.command: git --version
-          register: git_version
           changed_when: false
 
     - name: Certbot and nginx plugin installation
@@ -32,6 +31,8 @@
           register: certbot_version
           changed_when: false
           ignore_errors: yes
+          
+      when: not dev_environment
 
 
     - name: Certibox nginx plugin verification
@@ -54,6 +55,8 @@
           ansible.builtin.service:
             name: nginx
             enabled: no
+            
+      when: not dev_environment
 
     - name: Docker installation
       block:
@@ -113,5 +116,7 @@
         name: myretirement_docker_network
         state: present
         driver: bridge
+        
+    
 
 

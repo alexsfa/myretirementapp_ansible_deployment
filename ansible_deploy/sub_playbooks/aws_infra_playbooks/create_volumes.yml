@@ -64,13 +64,13 @@
               Name: "{{ 'dev_db_data' if dev_environment | bool else 'mysql-data' }}"
           when: mysql_data_ebs_info.volumes | length == 0
           register: mysql_data_ebs
+          
       
     - name: Set EFS and EBS as facts
       set_fact:
         static_data_efs: "{{ static_data_efs | default('') }}"
         mysql_data_ebs:  >-
-            { mysql_data_ebs.volumes[0].volume_id 
-              if mysql_data_ebs.changed
-              else mysql_data_ebs_info.volumes[0].volume_id }}
-        
+          {{ mysql_data_ebs.volume.id 
+              if mysql_data_ebs_info.changed
+              else mysql_data_ebs_info.volumes[0].id }}
           
