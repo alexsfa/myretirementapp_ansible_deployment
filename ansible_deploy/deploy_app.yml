@@ -9,10 +9,6 @@
         url: https://api.ipify.org
         return_content: yes
       register: control_host_ip
-  
-    - name: Set fact with current public IP
-      ansible.builtin.set_fact:
-        control_host_ip: "{{ control_host_ip.content }}"
         
     - name: Get public IP of the control vm's ssh client
       ansible.builtin.shell: echo $SSH_CLIENT | awk '{print $1}'
@@ -21,10 +17,10 @@
     - name: Set facts for the rest of the play
       set_fact:
         dev_environment: false
-        AWS_DEFAULT_REGION: 'us-east-1d'
-        control_host_ip: "{{ control_host_ip }}"
+        AWS_DEFAULT_REGION: us-east-1d
+        control_host_ip: "{{ control_host_ip.content }}"
         ssh_client_ip: "{{ ssh_client_ip.stdout }}"
         
 - import_playbook: ./sub_playbooks/create_aws_infra.yml
 - import_playbook: ./sub_playbooks/config_hosts.yml
-# - import_playbook: ./sub_playbooks/deploy_components.yml
+- import_playbook: ./sub_playbooks/deploy_components.yml

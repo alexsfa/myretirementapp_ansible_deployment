@@ -22,6 +22,12 @@
           - pkg-config # for mysqlclient
         state: present
         
+    - name: Install MySQL client on Django host
+      apt:
+        name: mysql-client-core-8.0
+        state: present
+        update_cache: yes
+        
     - name: Create Python virtual environment
       ansible.builtin.command:
         cmd: python3 -m venv /py
@@ -31,36 +37,6 @@
     - name: Upgrade pip in the virtual environment
       ansible.builtin.command:
         cmd: /py/bin/python -m pip install --upgrade pip
-    
-    - name: Install required packages on the venv
-      block:
-      
-        - name: Copy requirements.txt to remote host
-          ansible.builtin.copy:
-            src: ../vars/requirements/backend_requirements.txt   
-            dest: /tmp/backend_requirements.txt  
-
-        - name: Install Python packages from requirements.txt
-          ansible.builtin.pip:
-            requirements: /tmp/backend_requirements.txt
-            virtualenv: /py            
-            virtualenv_python: python3  
-        
-    - name: Install required packages for development on the venv
-      block:
-      
-        - name: Copy requirements.dev.txt to remote host
-          ansible.builtin.copy:
-            src: ../vars/requirements/backend_requirements.dev.txt   
-            dest: /tmp/backend_requirements.dev.txt 
-        
-        - name: Install Python packages from requirements.dev.txt
-          ansible.builtin.pip:
-            requirements: /tmp/backend_requirements.dev.txt
-            virtualenv: /py            
-            virtualenv_python: python3
-              
-      when: dev_environment | bool
       
     - name: Create Django system user
       ansible.builtin.user:

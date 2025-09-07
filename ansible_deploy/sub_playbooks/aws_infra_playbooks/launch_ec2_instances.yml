@@ -31,20 +31,19 @@
               assign_public_ip: true
           wait: yes
           tags:
+            Name: vue
             Environment: "{{ 'dev' if dev_environment | bool else 'prod' }}"
         when: vue_host_running.instances | length == 0
         register: vue_host
-        
+              
       - name: Set host IP fact
         set_fact:
-          vue_host_ip: >-
-            {{ vue_host.instances[0].public_ip_address
-              if vue_host.changed
-              else vue_host_running.instances[0].public_ip_address }}
-        
+          vue_host_public_ip: "{{ (vue_host.instances[0].public_ip_address if vue_host.changed else vue_host_running.instances[0].public_ip_address) | trim }}"
+          vue_host_private_ip: "{{ (vue_host.instances[0].private_ip_address if vue_host.changed else vue_host_running.instances[0].private_ip_address) | trim }}"
+          
       - name: Add the Vue host on dynamic inventory
         add_host:
-          name: "{{ vue_host_ip }}"
+          name: "{{ vue_host_public_ip }}"
           groups: 
             - vue_servers
           ansible_user: ubuntu
@@ -53,7 +52,7 @@
 
       - name: Wait for SSH connection with Vue host
         ansible.builtin.wait_for:
-          host: "{{ vue_host_ip }}"
+          host: "{{ vue_host_public_ip }}"
           port: 22
           timeout: 300
           state: started
@@ -86,20 +85,19 @@
               assign_public_ip: true
           wait: yes
           tags:
+            Name: django
             Environment: "{{ 'dev' if dev_environment | bool else 'prod' }}"
         when: django_host_running.instances | length == 0
         register: django_host
         
       - name: Set host IP fact
         set_fact:
-          django_host_ip: >-
-            {{ django_host.instances[0].public_ip_address
-              if django_host.changed
-              else django_host_running.instances[0].public_ip_address }}
-      
+          django_host_public_ip: "{{ (django_host.instances[0].public_ip_address if django_host.changed else django_host_running.instances[0].public_ip_address) | trim }}"
+          django_host_private_ip: "{{ (django_host.instances[0].private_ip_address if django_host.changed else django_host_running.instances[0].private_ip_address) | trim }}"
+              
       - name: Add the Django host on dynamic inventory
         add_host:
-          name: "{{ django_host_ip }}"
+          name: "{{ django_host_public_ip }}"
           groups: 
             - django_servers
           ansible_user: ubuntu
@@ -108,7 +106,7 @@
 
       - name: Wait for SSH connection with Django host
         ansible.builtin.wait_for:
-          host: "{{ django_host_ip }}"
+          host: "{{ django_host_public_ip }}"
           port: 22
           timeout: 300
           state: started
@@ -141,6 +139,7 @@
               assign_public_ip: true
           wait: yes
           tags:
+            Name: mysql
             Environment: "{{ 'dev' if dev_environment | bool else 'prod' }}"
         when: mysql_host_running.instances | length == 0  
         register: mysql_host
@@ -155,14 +154,12 @@
         
       - name: Set host IP fact
         set_fact:
-          mysql_host_ip: >-
-            {{ mysql_host.instances[0].public_ip_address
-              if mysql_host.changed
-              else mysql_host_running.instances[0].public_ip_address }}
-        
+          mysql_host_public_ip: "{{ (mysql_host.instances[0].public_ip_address if mysql_host.changed else mysql_host_running.instances[0].public_ip_address) | trim }}"
+          mysql_host_private_ip: "{{ (mysql_host.instances[0].private_ip_address if mysql_host.changed else mysql_host_running.instances[0].private_ip_address) | trim }}"
+              
       - name: Add the MySQL host on dynamic inventory
         add_host:
-          name: "{{ mysql_host_ip }}"
+          name: "{{ mysql_host_public_ip }}"
           groups: 
             - mysql_servers
           ansible_user: ubuntu
@@ -171,7 +168,7 @@
 
       - name: Wait for SSH connection with MySQL host
         ansible.builtin.wait_for:
-          host: "{{ mysql_host_ip }}"
+          host: "{{ mysql_host_public_ip }}"
           port: 22
           timeout: 300
           state: started
@@ -204,20 +201,19 @@
               assign_public_ip: true
           wait: yes
           tags:
+            Name: mailhog
             Environment: "{{ 'dev' if dev_environment | bool else 'prod' }}"
         when: mailhog_host_running.instances | length == 0
         register: mailhog_host
         
       - name: Set host IP fact
         set_fact:
-          mailhog_host_ip: >-
-            {{ mailhog_host.instances[0].public_ip_address
-              if mailhog_host.changed
-              else mailhog_host_running.instances[0].public_ip_address }}
-          
+          mailhog_host_public_ip: "{{ (mailhog_host.instances[0].public_ip_address if mailhog_host.changed else mailhog_host_running.instances[0].public_ip_address) | trim }}"
+          mailhog_host_private_ip: "{{ (mailhog_host.instances[0].private_ip_address if mailhog_host.changed else mailhog_host_running.instances[0].private_ip_address) | trim }}"
+              
       - name: Add the Mailhog host on dynamic inventory
         add_host:
-          name: "{{ mailhog_host_ip }}"
+          name: "{{ mailhog_host_public_ip }}"
           groups: 
             - mailhog_servers
           ansible_user: ubuntu
@@ -226,7 +222,7 @@
 
       - name: Wait for SSH connection with Mailhog host
         ansible.builtin.wait_for:
-          host: "{{ mailhog_host_ip }}"
+          host: "{{ mailhog_host_public_ip }}"
           port: 22
           timeout: 300
           state: started
@@ -259,20 +255,19 @@
               assign_public_ip: true
           wait: yes
           tags:
+            Name: nginx
             Environment: "prod"
         when: nginx_host_running.instances | length == 0
         register: nginx_host
         
       - name: Set host IP fact
         set_fact:
-          nginx_host_ip: >-
-            {{ nginx_host.instances[0].public_ip_address
-              if nginx_host.changed
-              else nginx_host_running.instances[0].public_ip_address }}
-          
+          nginx_host_public_ip: "{{ (nginx_host.instances[0].public_ip_address if nginx_host.changed else nginx_host_running.instances[0].public_ip_address) | trim }}"
+          nginx_host_private_ip: "{{ (nginx_host.instances[0].public_ip_address if nginx_host.changed else nginx_host_running.instances[0].public_ip_address) | trim }}"
+        
       - name: Add the Nginx host on dynamic inventory
         add_host:
-          name: "{{ nginx_host_ip }}"
+          name: "{{ nginx_host_public_ip }}"
           groups: 
             - nginx_servers
           ansible_user: ubuntu
@@ -281,7 +276,7 @@
 
       - name: Wait for SSH connection with Nginx host
         ansible.builtin.wait_for:
-          host: "{{ nginx_host_ip }}"
+          host: "{{ nginx_host_public_ip }}"
           port: 22
           timeout: 300
           state: started

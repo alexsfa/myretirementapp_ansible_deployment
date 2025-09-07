@@ -83,5 +83,5 @@
           mode: '0600'
         when: nginx_keyout.changed
         
-    when: not dev_environment
+    when: not hostvars['localhost'].dev_environment
         

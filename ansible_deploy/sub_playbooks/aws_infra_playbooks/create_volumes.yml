@@ -64,13 +64,15 @@
               Name: "{{ 'dev_db_data' if dev_environment | bool else 'mysql-data' }}"
           when: mysql_data_ebs_info.volumes | length == 0
           register: mysql_data_ebs
+    
           
-      
+      # If there is an existing volume before 'EBS for MySQL data files', the mysql_data_ebs.volume will not be defined
+      # We make sure that the existing volume's id gets stored as fact.
     - name: Set EFS and EBS as facts
       set_fact:
         static_data_efs: "{{ static_data_efs | default('') }}"
         mysql_data_ebs:  >-
-          {{ mysql_data_ebs.volume.id 
-              if mysql_data_ebs_info.changed
-              else mysql_data_ebs_info.volumes[0].id }}
+          {{ (mysql_data_ebs.volume.id | default(''))
+              if (mysql_data_ebs is defined and mysql_data_ebs.volume is defined)
+              else (mysql_data_ebs_info.volumes | map(attribute='id') | first | default('')) }}
           

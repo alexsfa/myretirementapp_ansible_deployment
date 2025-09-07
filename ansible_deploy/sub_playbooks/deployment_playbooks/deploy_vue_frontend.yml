@@ -2,7 +2,7 @@
 - name: Deploy the vue frontend component of the app
   hosts: vue_servers
   vars_files:
-  - ../vars/deploy_frontend_vars.yml
+    - ../vars/frontend_variables.yml
   tasks:
   
     - name: Clone git repo of Vue frontend
@@ -31,10 +31,10 @@
   
     - name: Create .env and enter the VITE_API_URL
       ansible.builtin.lineinfile:
-        path: "{{ dev_environment | ternary('/home/ubuntu/myretirement/.env.dev',
-                                            '/home/ubuntu/myretirement/.env.prod') }}"
-        line: "{{ dev_environment | ternary('VITE_API_URL='~ hostvars['localhost'].vue_host_ip,
-                                            'VITE_API_URL=/api/') }}"
+        path: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement/.env.dev',
+                                                          '/home/ubuntu/myretirement/.env.prod') }}"
+        line: "{{ hostvars['localhost'].dev_environment | ternary('VITE_API_URL='~ hostvars['localhost'].vue_host_public_ip,
+                                                          'VITE_API_URL=/api/') }}"
         create: yes
         state: present
       
@@ -49,7 +49,7 @@
       community.general.npm:
         path: /home/ubuntu/myretirement
 
-    - name: Start frontend services in background
+    - name: Start frontend services 
       ansible.builtin.shell: npm run dev -- --host 0.0.0.0 --port 5173
       args:
         chdir: /home/ubuntu/myretirement

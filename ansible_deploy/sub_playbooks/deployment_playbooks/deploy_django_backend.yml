@@ -2,7 +2,8 @@
 - name: Deploy the Django API component of the app
   hosts: django_servers
   vars_files:
-  - ../vars/deploy_backend_vars.yml
+  - ../vars/backend_variables.yml
+  - ../vars/db_credentials.yml
   tasks:
   
   - name: Clone git repo of Django API backend
@@ -28,3 +29,43 @@
         file:
           path: /tmp/github_backend_key
           state: absent
+
+  - name: Install Python packages from requirements.txt
+    become: yes
+    ansible.builtin.pip:
+      requirements: /home/ubuntu/myretirement_api/requirements.txt
+      virtualenv: /py            
+      virtualenv_python: python3  
+    
+  - name: Install Python packages from requirements.dev.txt
+    become: yes
+    ansible.builtin.pip:
+      requirements: /home/ubuntu/myretirement_api/requirements.dev.txt
+      virtualenv: /py            
+      virtualenv_python: python3
+    when: hostvars['localhost'].dev_environment | bool
+          
+  - name: Create .env file
+    ansible.builtin.template:
+      src: ../templates/backend_env_vars.j2
+      dest: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement_api/app/.env.dev',
+                                                          '/home/ubuntu/myretirement_api/app/.env.prod') }}"
+      mode: '0600'
+                                                          
+  - name: Add mailhog host's ip and port in the .env file
+    ansible.builtin.blockinfile:
+      path: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement_api/app/.env.dev',
+                                                          '/home/ubuntu/myretirement_api/app/.env.prod') }}"
+      block: |
+        DB_HOST={{ hostvars['localhost'].mysql_host_private_ip }}
+        EMAIL_HOST={{ hostvars['localhost'].mailhog_host_private_ip }}
+        EMAIL_PORT=1025
+      
+          
+  - name: Run Django wait_for_db command
+    ansible.builtin.command:
+      cmd: /py/bin/python manage.py wait_for_db
+      chdir: /home/ubuntu/myretirement_api/app
+    
+          
+    

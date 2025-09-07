@@ -2,8 +2,6 @@
 - name: Create SGs for each component's host
   hosts: localhost
   gather_facts: yes
-  environment:
-    AWS_DEFAULT_REGION: us-east-1d
   tasks:
   
     - name: Create sg for Vue host

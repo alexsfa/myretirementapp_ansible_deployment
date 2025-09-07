@@ -4,3 +4,4 @@
   gather_facts: no
 
 - import_playbook: ./deployment_playbooks/deploy_vue_frontend.yml
+- import_playbook: ./deployment_playbooks/deploy_django_backend.yml
