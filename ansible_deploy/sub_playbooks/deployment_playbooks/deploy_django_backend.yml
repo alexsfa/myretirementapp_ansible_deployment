@@ -66,6 +66,11 @@
     ansible.builtin.command:
       cmd: /py/bin/python manage.py wait_for_db
       chdir: /home/ubuntu/myretirement_api/app
+      
+  - name: Run Django wait_for_db command
+    ansible.builtin.command:
+      cmd: /py/bin/python manage.py migrate
+      chdir: /home/ubuntu/myretirement_api/app
     
           
     

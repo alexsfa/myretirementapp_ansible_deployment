@@ -26,9 +26,18 @@
             name: mysql
             state: started
             enabled: yes
-          
-
-      
+    
+    - name: Configure MySQL to bind to server IP
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '^bind-address'
+        line: "bind-address = 0.0.0.0"
+        backup: yes
+      notify: 
+        - Restart MySQL
+        - Wait for MySQL to restart
+    
+    
     - name: Create admin user for Ansible
       mysql_user:
         name: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
@@ -52,24 +61,56 @@
         name: "{{ dev_db_credentials.DB_USER }}"
         host: "{{ hostvars['localhost'].django_host_private_ip }}"
         password: "{{ dev_db_credentials.DB_PASS }}"
-        priv: "{{ dev_db_credentials.DB_NAME }}.*:ALL, test_{{ dev_db_credentials.DB_NAME }}.*:ALL"
+        state: present
+        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
+        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
+    
+    - name: Create application user
+      mysql_user:
+        name: "{{ dev_db_credentials.DB_USER }}"
+        host: "{{ hostvars['localhost'].django_host_private_ip }}"
+        password: "{{ dev_db_credentials.DB_PASS }}"
         state: present
         login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
         login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
         
-    - name: Configure MySQL to bind to server IP
-      lineinfile:
-        path: /etc/mysql/mysql.conf.d/mysqld.cnf
-        regexp: '^bind-address'
-        line: "bind-address = 0.0.0.0"
-        backup: yes
-      notify: Restart MySQL
+    - name: Grant privileges on dbname
+      mysql_user:
+        name: "{{ dev_db_credentials.DB_USER }}"
+        host: "{{ hostvars['localhost'].django_host_private_ip }}"
+        password: "{{ dev_db_credentials.DB_PASS }}"
+        priv: "{{ dev_db_credentials.DB_NAME }}.*:ALL"
+        state: present
+        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
+        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
+        append_privs: yes
+
+    - name: Grant privileges on test_dbname
+      mysql_user:
+        name: "{{ dev_db_credentials.DB_USER }}"
+        host: "{{ hostvars['localhost'].django_host_private_ip }}"
+        password: "{{ dev_db_credentials.DB_PASS }}"
+        priv: "test_{{ dev_db_credentials.DB_NAME }}.*:ALL"
+        state: present
+        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
+        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
+        append_privs: yes
       
   handlers:
-    - name: Restart MySQL
+      
+    - name: Restart MySQL 
       service:
         name: mysql
         state: restarted
+          
+    - name: Wait for MySQL to restart
+      wait_for:
+        port: 3306
+        host: 0.0.0.0
+        state: started
+        delay: 10
+        timeout: 30
+          
 
         
         
