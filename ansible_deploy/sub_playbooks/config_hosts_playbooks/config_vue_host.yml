@@ -24,13 +24,19 @@
           args:
             executable: /bin/bash
             
-        - name: Install Node.js (includes npm)
+        - name: Install Node.js LTS
           apt:
-            name: nodejs
+            name: 
+              - nodejs
             state: present
+            update_cache: yes
             
         - name: Verify Node.js installation
           ansible.builtin.command: node -v
+          changed_when: false
+          
+        - name: Verify npm installation
+          command: npm -v
           changed_when: false
           
         - name: Verify npm installation

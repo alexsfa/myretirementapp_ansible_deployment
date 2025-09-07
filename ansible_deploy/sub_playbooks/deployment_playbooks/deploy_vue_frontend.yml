@@ -29,14 +29,24 @@
             path: /tmp/github_frontend_key
             state: absent
   
+    # Vite uses the development mode by default, so it excepts a .env file with the development postfix
     - name: Create .env and enter the VITE_API_URL
       ansible.builtin.lineinfile:
-        path: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement/.env.dev',
-                                                          '/home/ubuntu/myretirement/.env.prod') }}"
+        path: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement/.env.development',
+                                                          '/home/ubuntu/myretirement/.env.production') }}"
         line: "{{ hostvars['localhost'].dev_environment | ternary('VITE_API_URL='~ hostvars['localhost'].vue_host_public_ip,
                                                           'VITE_API_URL=/api/') }}"
         create: yes
         state: present
+        
+      # Vite dev server runs in browser so it needs the django host's public IP as VITE_API_TARGET
+    - name: Enter VITE_DEV_HOST and VITE_API_TARGET on the .env.dev
+      ansible.builtin.blockinfile:
+        path: '/home/ubuntu/myretirement/.env.development'
+        block: |
+          VITE_DEV_HOST={{ hostvars['localhost']['vue_host_public_ip'] }}
+          VITE_API_TARGET=http://{{ hostvars['localhost'].django_host_private_ip }}:8000 
+      when: hostvars['localhost'].dev_environment | bool
       
     - name: Give ubuntu rwx access on the vue log file
       become: yes
@@ -48,13 +58,19 @@
     - name: Install Vue app dependencies from package.json
       community.general.npm:
         path: /home/ubuntu/myretirement
+        
+    - name: Check if Vue frontend server is running
+      ansible.builtin.shell: "lsof -i :5173"
+      register: vue_port
+      ignore_errors: yes
 
     - name: Start frontend services 
-      ansible.builtin.shell: npm run dev -- --host 0.0.0.0 --port 5173
+      ansible.builtin.shell: npm run dev -- --host 0.0.0.0 --port 5173 --mode development
       args:
         chdir: /home/ubuntu/myretirement
       become: yes
       become_user: ubuntu
       async: 3600   
-      poll: 0      
+      poll: 0
+      when: vue_port.rc != 0 
   
