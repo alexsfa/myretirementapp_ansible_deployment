@@ -76,7 +76,7 @@
       cmd: /py/bin/python manage.py migrate
       chdir: /home/ubuntu/myretirement_api/app
       
-  - name: Ensure Django superuser exists
+  - name: Create script to ensure that Django superuser and employee exist
     copy:
       dest: /tmp/create_superuser.py
       content: |
@@ -91,13 +91,21 @@
         django.setup()
         from django.contrib.auth import get_user_model
         
-        email = os.getenv('DJANGO_SUPERUSER_EMAIL')
-        password = os.getenv('DJANGO_SUPERUSER_PASSWORD')
+        admin_email = os.getenv('DJANGO_SUPERUSER_EMAIL')
+        admin_password = os.getenv('DJANGO_SUPERUSER_PASSWORD')
         User = get_user_model()
-        if not User.objects.filter(email=email).exists(): 
-            User.objects.create_superuser(email=email, password=password)
+        if not User.objects.filter(email=admin_email).exists(): 
+            User.objects.create_superuser(email=admin_email, password=admin_password)
+            
+        employee_email = os.getenv('DJANGO_EMPLOYEE_EMAIL')
+        employee_password = os.getenv('DJANGO_EMPLOYEE_PASSWORD')
+        employee_name = os.getenv('DJANGO_EMPLOYEE_NAME')
+        User = get_user_model()
+        if not User.objects.filter(email=employee_email).exists(): 
+            User.objects.create_user(email=employee_email, name=employee_name, password=employee_password, role='employee')
+        
   
-  - name: Create Django superuser with script
+  - name: Create Django superuser and employee with script
     command: /py/bin/python /tmp/create_superuser.py
     args:
       chdir: /home/ubuntu/myretirement_api/app

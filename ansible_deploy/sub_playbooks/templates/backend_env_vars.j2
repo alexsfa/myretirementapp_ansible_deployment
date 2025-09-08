@@ -1,19 +1,13 @@
 # Template for the .env file of django backend 
 {% if dev_environment | bool %}
-ROOT_PASS={{ dev_db_credentials.ROOT_PASS }}
-DB_NAME={{ dev_db_credentials.DB_NAME }}
-DB_USER={{ dev_db_credentials.DB_USER }}
-DB_PASS={{ dev_db_credentials.DB_PASS }}
-DB_ADMIN_NAME={{ dev_db_credentials.DB_ADMIN_NAME }}
-DB_ADMIN_PASS={{ dev_db_credentials.DB_ADMIN_PASS }}
+{% for key, value in dev_db_credentials.items() %}
+{{ key }}={{ value }}
+{% endfor %}
 {% else %}
-ROOT_PASS={{ dev_prod_credentials.ROOT_PASS }}
-DB_NAME={{ dev_prod_credentials.DB_NAME }}
-DB_USER={{ dev_prod_credentials.DB_USER }}
-DB_PASS={{ dev_prod_credentials.DB_PASS }}
-DB_ADMIN_NAME={{ dev_prod_credentials.DB_ADMIN_NAME }}
-DB_ADMIN_PASS={{ dev_prod_credentials.DB_ADMIN_PASS }}
+{% for key, value in prod_db_credentials.items() %}
+{{ key }}={{ value }}
+{% endfor %}
 {% endif %}
-DJANGO_SECRET_KEY={{ dev_env_vars.DJANGO_SECRET_KEY }}
-DJANGO_SUPERUSER_PASSWORD={{ dev_env_vars.DJANGO_SUPERUSER_PASSWORD }}
-DJANGO_SUPERUSER_EMAIL={{ dev_env_vars.DJANGO_SUPERUSER_EMAIL }}
+{% for key, value in env_vars.items() %}
+{{ key }}={{ value }}
+{% endfor %}

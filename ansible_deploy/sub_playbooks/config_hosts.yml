@@ -2,3 +2,4 @@
 - import_playbook: ./config_hosts_playbooks/config_vue_host.yml
 - import_playbook: ./config_hosts_playbooks/config_mysql_host.yml
 - import_playbook: ./config_hosts_playbooks/config_django_host.yml
+- import_playbook: ./config_hosts_playbooks/config_mailhog_host.yml

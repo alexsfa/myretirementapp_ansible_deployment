@@ -110,7 +110,35 @@
           register: compose_version
           changed_when: false
           failed_when: compose_version.rc != 0
+    
+    - name: Create a Docker volume for the ssl certificate
+      docker_volume:
+        name: ssl_certificate
+        driver: local
+        state: present
+        
+      # synchronize module instead of copy helps preserve the symlink of the directory
+      # certbot needs the contents of /etc/letsencrypt/live/<domain>/*.pem to know the current version of the cert
+    - name: Copy files directly to Docker volume
+      synchronize:
+        src: ../../ssl_certificate/
+        dest: /var/lib/docker/volumes/ssl_certificate/_data/
+        recursive: yes
+        rsync_opts:
+          - "-l" # preserve symlinks
+          
+    - name: Ensure correct ownership of Docker volume files
+      file:
+        path: /var/lib/docker/volumes/ssl_certificate/_data/
+        owner: root
+        group: root
+        recurse: yes
 
+    - name: Fix private key permissions
+      file:
+        path: /var/lib/docker/volumes/ssl_certificate/_data/live/myretirement.click/privkey.pem
+        mode: '0600'
+    
     - name: Create a Docker network
       community.docker.docker_network:
         name: myretirement_docker_network

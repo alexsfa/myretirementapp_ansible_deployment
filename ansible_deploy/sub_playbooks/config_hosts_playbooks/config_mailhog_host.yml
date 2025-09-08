@@ -23,6 +23,13 @@
     args:
       creates: "{{ mailhog_bin_path }}"
       
+  - name: Ensure mailhog user exists
+    ansible.builtin.user:
+      name: mailhog
+      system: yes # sets the user as system accounts (usually UID<1000)
+      shell: /usr/sbin/nologin # prevents login access
+      create_home: no
+      
   - name: Create systemd service for MailHog
     copy:
       dest: /etc/systemd/system/mailhog.service
@@ -32,9 +39,9 @@
           After=network.target
 
           [Service]
-          ExecStart={{ mailhog_bin_path }} -smtp-bind-addr "0.0.0.0:{{ smtp_port }}" -ui-bind-addr "0.0.0.0:{{ web_port }}"
+          ExecStart={{ mailhog_bin_path }} -smtp-bind-addr "0.0.0.0:1025" -ui-bind-addr "0.0.0.0:8025"
           Restart=always
-          User={{ mailhog_user }}
+          User=mailhog
 
           [Install]
           WantedBy=multi-user.target
