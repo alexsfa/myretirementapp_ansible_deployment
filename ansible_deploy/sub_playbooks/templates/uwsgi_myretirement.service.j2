@@ -1,0 +1,16 @@
+[Unit]
+Description=uWSGI instance to serve myretirement API
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory={{ api_app_path }}/app
+Environment="PATH={{ virtualenv_name }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+ExecStart={{ virtualenv_name }}/bin/uwsgi --ini {{ api_app_path }}/app/uwsgi.ini
+Restart=always
+KillSignal=SIGQUIT
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

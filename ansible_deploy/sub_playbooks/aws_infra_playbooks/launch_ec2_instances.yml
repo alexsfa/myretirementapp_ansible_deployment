@@ -1,6 +1,8 @@
 ---
 - name: Create SGs for each component's host
   hosts: localhost
+  vars_files:
+   - ../vars/aws_credentials.yml
   tasks:
   
   - name: Create the Vue host's instance and confirm that it's reachable
@@ -8,7 +10,7 @@
     
       - name: Check for existing Vue host
         amazon.aws.ec2_instance_info:
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
           filters:
             "tag:Name": vue_host
             "instance-state-name": running
@@ -21,8 +23,8 @@
           key_name: vue-host-key
           instance_type: t2.micro
           count: 1
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
-          vpc_subnet_id: 
+          region: "{{ AWS_DEFAULT_REGION }}"
+          vpc_subnet_id: vpc-0a939c19442ae9cf8
           network_interfaces:
             - device_index: 0
               subnet_id: subnet-045e46c91af1579fc
@@ -40,6 +42,7 @@
         set_fact:
           vue_host_public_ip: "{{ (vue_host.instances[0].public_ip_address if vue_host.changed else vue_host_running.instances[0].public_ip_address) | trim }}"
           vue_host_private_ip: "{{ (vue_host.instances[0].private_ip_address if vue_host.changed else vue_host_running.instances[0].private_ip_address) | trim }}"
+          vue_host: "{{ vue_host }}"
           
       - name: Add the Vue host on dynamic inventory
         add_host:
@@ -49,7 +52,7 @@
           ansible_user: ubuntu
           ansible_ssh_private_key_file: "{{ lookup('env','HOME') }}/.ssh/vue-host-key.pem"
           ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-
+          
       - name: Wait for SSH connection with Vue host
         ansible.builtin.wait_for:
           host: "{{ vue_host_public_ip }}"
@@ -63,7 +66,7 @@
     
       - name: Check for existing Django host
         amazon.aws.ec2_instance_info:
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
           filters:
             "tag:Name": django_host
             "instance-state-name": running
@@ -75,7 +78,7 @@
           image_id: ami-020cba7c55df1f615
           key_name: django-host-key
           instance_type: t2.micro
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
           count: 1
           network_interfaces:
             - device_index: 0
@@ -117,7 +120,7 @@
     
       - name: Check for existing MySql host
         amazon.aws.ec2_instance_info:
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
           filters:
             "tag:Name": mysql_host
             "instance-state-name": running
@@ -129,7 +132,7 @@
           image_id: ami-020cba7c55df1f615
           key_name: mysql-host-key
           instance_type: t2.micro
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
           count: 1
           network_interfaces:
             - device_index: 0
@@ -143,14 +146,6 @@
             Environment: "{{ 'dev' if dev_environment | bool else 'prod' }}"
         when: mysql_host_running.instances | length == 0  
         register: mysql_host
-        
-      - name: Attach existing EBS to MySQL host
-        amazon.aws.ec2_vol:
-          id: "{{ mysql_data_ebs }}"
-          instance: "{{ mysql_host.instances[0].instance_id }}"
-          device_name: /dev/sdf 
-          state: present
-        when: mysql_host_running.instances | length == 0
         
       - name: Set host IP fact
         set_fact:
@@ -179,7 +174,7 @@
     
       - name: Check for existing Mailhog host
         amazon.aws.ec2_instance_info:
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
           filters:
             "tag:Name": mailhog_host
             "instance-state-name": running
@@ -191,7 +186,7 @@
           image_id: ami-020cba7c55df1f615
           key_name: mailhog-host-key
           instance_type: t2.micro
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
           count: 1
           network_interfaces:
             - device_index: 0
@@ -227,59 +222,19 @@
           timeout: 300
           state: started
         delegate_to: localhost
-          
-  - name: Create the Nginx host's instance and confirm that it's reachable
-    block:
-    
-      - name: Check for existing Nginx host
-        amazon.aws.ec2_instance_info:
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
-          filters:
-            "tag:Name": nginx_host
-            "instance-state-name": running
-        register: nginx_host_running
-    
-      - name: Launch the Nginx host
-        amazon.aws.ec2_instance:
-          name: "nginx_host"
-          image_id: ami-020cba7c55df1f615
-          key_name: nginx-host-key
-          instance_type: t2.micro
-          region: "{{ lookup('env', 'AWS_DEFAULT_REGION') }}"
-          count: 1
-          network_interfaces:
-            - device_index: 0
-              subnet_id: subnet-045e46c91af1579fc
-              groups:
-                - "{{ nginx_sg_id }}"
-              assign_public_ip: true
-          wait: yes
-          tags:
-            Name: nginx
-            Environment: "prod"
-        when: nginx_host_running.instances | length == 0
-        register: nginx_host
         
-      - name: Set host IP fact
-        set_fact:
-          nginx_host_public_ip: "{{ (nginx_host.instances[0].public_ip_address if nginx_host.changed else nginx_host_running.instances[0].public_ip_address) | trim }}"
-          nginx_host_private_ip: "{{ (nginx_host.instances[0].public_ip_address if nginx_host.changed else nginx_host_running.instances[0].public_ip_address) | trim }}"
         
-      - name: Add the Nginx host on dynamic inventory
-        add_host:
-          name: "{{ nginx_host_public_ip }}"
-          groups: 
-            - nginx_servers
-          ansible_user: ubuntu
-          ansible_ssh_private_key_file: "{{ lookup('env','HOME') }}/.ssh/nginx-host-key.pem"
-          ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-
-      - name: Wait for SSH connection with Nginx host
-        ansible.builtin.wait_for:
-          host: "{{ nginx_host_public_ip }}"
-          port: 22
-          timeout: 300
-          state: started
-        delegate_to: localhost
-          
-    when: not dev_environment      
+  - name: Create A record for domain in Route 53
+    amazon.aws.route53:
+      zone: "myretirement.click."
+      record: "myretirement.click"
+      type: A
+      value: "{{ vue_host_public_ip }}"
+      ttl: 300
+      state: present
+      overwrite: true
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ aws_credentials.aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ aws_credentials.aws_secret_access_key }}"
+    when: not dev_environment
+               

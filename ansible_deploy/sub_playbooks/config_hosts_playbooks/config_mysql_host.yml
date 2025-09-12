@@ -4,6 +4,8 @@
   become: yes
   vars_files:
     - ../vars/db_credentials.yml
+  vars:
+    dev_environment: "{{ hostvars['localhost'].dev_environment | bool }}"
   tasks:
   
     - name: Update apt
@@ -33,15 +35,15 @@
         regexp: '^bind-address'
         line: "bind-address = 0.0.0.0"
         backup: yes
-      notify: 
+      notify:
         - Restart MySQL
         - Wait for MySQL to restart
-    
+      
     
     - name: Create admin user for Ansible
       mysql_user:
-        name: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
-        password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
+        name: "{{ DB_ADMIN_NAME }}"
+        password: "{{ DB_ADMIN_PASS }}"
         priv: "*.*:ALL,GRANT"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
@@ -50,39 +52,28 @@
       mysql_db:
         name: "{{ item }}"
         state: present
-        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
-        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
-      loop:
-        - "{{ dev_db_credentials.DB_NAME }}"
-        - "test_{{ dev_db_credentials.DB_NAME }}"
+        login_user: "{{ DB_ADMIN_NAME }}"
+        login_password: "{{ DB_ADMIN_PASS }}"
+      loop: "{{ ( [ dev_db_credentials.DB_NAME,'test_' ~ dev_db_credentials.DB_NAME ] if dev_environment else [ prod_db_credentials.DB_NAME ] ) }}"
             
     - name: Create application user
       mysql_user:
-        name: "{{ dev_db_credentials.DB_USER }}"
+        name: "{{ dev_environment | ternary(dev_db_credentials.DB_USER, prod_db_credentials.DB_USER) }}"
         host: "{{ hostvars['localhost'].django_host_private_ip }}"
-        password: "{{ dev_db_credentials.DB_PASS }}"
+        password: "{{ dev_environment | ternary(dev_db_credentials.DB_PASS, prod_db_credentials.DB_PASS) }}"
         state: present
-        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
-        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
-    
-    - name: Create application user
-      mysql_user:
-        name: "{{ dev_db_credentials.DB_USER }}"
-        host: "{{ hostvars['localhost'].django_host_private_ip }}"
-        password: "{{ dev_db_credentials.DB_PASS }}"
-        state: present
-        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
-        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
+        login_user: "{{ DB_ADMIN_NAME }}"
+        login_password: "{{ DB_ADMIN_PASS }}"
         
     - name: Grant privileges on dbname
       mysql_user:
-        name: "{{ dev_db_credentials.DB_USER }}"
+        name: "{{ dev_environment | ternary(dev_db_credentials.DB_USER, prod_db_credentials.DB_USER) }}"
         host: "{{ hostvars['localhost'].django_host_private_ip }}"
-        password: "{{ dev_db_credentials.DB_PASS }}"
-        priv: "{{ dev_db_credentials.DB_NAME }}.*:ALL"
+        password: "{{ dev_environment | ternary(dev_db_credentials.DB_PASS, prod_db_credentials.DB_PASS) }}"
+        priv: "{{ dev_environment | ternary(dev_db_credentials.DB_NAME, prod_db_credentials.DB_NAME) }}.*:ALL"
         state: present
-        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
-        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
+        login_user: "{{ DB_ADMIN_NAME }}"
+        login_password: "{{ DB_ADMIN_PASS }}"
         append_privs: yes
 
     - name: Grant privileges on test_dbname
@@ -92,9 +83,10 @@
         password: "{{ dev_db_credentials.DB_PASS }}"
         priv: "test_{{ dev_db_credentials.DB_NAME }}.*:ALL"
         state: present
-        login_user: "{{ dev_db_credentials.DB_ADMIN_NAME }}"
-        login_password: "{{ dev_db_credentials.DB_ADMIN_PASS }}"
+        login_user: "{{ DB_ADMIN_NAME }}"
+        login_password: "{{ DB_ADMIN_PASS }}"
         append_privs: yes
+      when: dev_environment
       
   handlers:
       

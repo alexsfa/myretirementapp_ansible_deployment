@@ -3,13 +3,13 @@
   hosts: localhost
   tasks:
   
-  - name: Create and save key pair for view host
+  - name: Create and save key pair for Vue host
     block:
     
       - name: Create key pair for the Vue host
         ec2_key:
           name: vue-host-key
-          region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
         register: vue_keyout
     
       - name: save private key
@@ -25,7 +25,7 @@
       - name: Create key pair for the Django host
         ec2_key:
           name: django-host-key
-          region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
         register: django_keyout
     
       - name: save private key
@@ -41,7 +41,7 @@
       - name: Create key pair for the MySQL host
         ec2_key:
           name: mysql-host-key
-          region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
         register: mysql_keyout
     
       - name: save private key
@@ -57,7 +57,7 @@
       - name: Create key pair for the Mailhog host
         ec2_key:
           name: mailhog-host-key
-          region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+          region: "{{ AWS_DEFAULT_REGION }}"
         register: mailhog_keyout
     
       - name: save private key
@@ -67,21 +67,4 @@
           mode: '0600'
         when: mailhog_keyout.changed
         
-  - name: Create and save key pair for Nginx host
-    block:
-    
-      - name: Create key pair for the Nginx host
-        ec2_key:
-          name: nginx-host-key
-          region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
-        register: nginx_keyout
-    
-      - name: save private key
-        copy:
-          content: "{{ nginx_keyout.key.private_key }}"
-          dest: "{{ lookup('env','HOME') }}/.ssh/nginx-host-key.pem"
-          mode: '0600'
-        when: nginx_keyout.changed
-        
-    when: not hostvars['localhost'].dev_environment
         

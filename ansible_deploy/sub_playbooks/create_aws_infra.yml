@@ -5,6 +5,5 @@
 
 - import_playbook: ./aws_infra_playbooks/create_key_pairs.yml 
 - import_playbook: ./aws_infra_playbooks/create_security_groups.yml
-- import_playbook: ./aws_infra_playbooks/create_volumes.yml   
 - import_playbook: ./aws_infra_playbooks/launch_ec2_instances.yml
 

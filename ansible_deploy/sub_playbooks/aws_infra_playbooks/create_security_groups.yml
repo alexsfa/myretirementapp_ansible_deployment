@@ -9,58 +9,30 @@
         name: "Vue-sg"
         description: "Security group for the Vue frontend host"
         vpc_id: vpc-0a939c19442ae9cf8
-        region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+        region: "{{ AWS_DEFAULT_REGION }}"
         rules: >-
           {{
             [{'proto': 'tcp', 'from_port':22, 'to_port':22, 'cidr_ip': control_host_ip + '/32'}] +
-            ([{'proto': 'tcp', 'from_port':5173, 'to_port':5173, 'cidr_ip': ssh_client_ip + '/32'}] if dev_environment | bool else [])
+            (
+              [
+                {'proto': 'tcp', 'from_port':5173, 'to_port':5173, 'cidr_ip': ssh_client_ip + '/32'}
+              ] if dev_environment | bool else [
+                {'proto': 'tcp', 'from_port':80, 'to_port':80, 'cidr_ip': "0.0.0.0/0"},
+                {'proto': 'tcp', 'from_port':80, 'to_port':80, 'cidr_ipv6': "::/0"},
+                {'proto': 'tcp', 'from_port':443, 'to_port':443, 'cidr_ip': "0.0.0.0/0"},
+                {'proto': 'tcp', 'from_port':443, 'to_port':443, 'cidr_ipv6': "::/0"},
+              ]
+            )
           }}
         state: present
       register: Vue_sg
-          
-    - name: Create sg for Nginx proxy host
-      amazon.aws.ec2_security_group:
-        name: "Nginx-sg"
-        description: "Security group for the Nginx proxy host"
-        vpc_id: vpc-0a939c19442ae9cf8
-        region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
-        rules: 
-        
-          - proto: tcp
-            from_port: 22
-            to_port: 22
-            cidr_ip: "{{ control_host_ip }}/32"
             
-          - proto: tcp
-            from_port: 80
-            to_port: 80
-            cidr_ip: "0.0.0.0/0"
-                
-          - proto: tcp
-            from_port: 80
-            to_port: 80
-            cidr_ipv6: "::/0"
-                
-          - proto: tcp
-            from_port: 443
-            to_port: 443
-            cidr_ip: "0.0.0.0/0"
-                
-          - proto: tcp
-            from_port: 443
-            to_port: 443
-            cidr_ipv6: "::/0"
-        
-        state: present            
-      register: Nginx_sg
-      when: not dev_environment
-        
     - name: Create sg for Django host
       amazon.aws.ec2_security_group:
         name: "Django-sg"
         description: "Security group for the Django API host"
         vpc_id: vpc-0a939c19442ae9cf8
-        region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+        region: "{{ AWS_DEFAULT_REGION }}"
         rules: >-
           {{
             [{'proto': 'tcp', 'from_port':22, 'to_port':22, 'cidr_ip': control_host_ip + '/32'}] +
@@ -70,7 +42,7 @@
                 {'proto': 'tcp', 'from_port':8000, 'to_port':8000, 'group_id': Vue_sg.group_id}
               ] if dev_environment | bool else
               [
-                {'proto':'tcp','from_port':9000,'to_port':9000,'group_id': Nginx_sg.group_id}
+                {'proto':'tcp','from_port':9000,'to_port':9000,'group_id': Vue_sg.group_id}
               ]
             )
           }} 
@@ -82,7 +54,7 @@
         name: "Mysql-sg"
         description: "Security group for the MySQL database host"
         vpc_id: vpc-0a939c19442ae9cf8
-        region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+        region: "{{ AWS_DEFAULT_REGION }}"
         rules:
             
           - proto: tcp
@@ -103,7 +75,7 @@
         name: "Mailhog-sg"
         description: "Security group for the Mailhog service host"
         vpc_id: vpc-0a939c19442ae9cf8
-        region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+        region: "{{ AWS_DEFAULT_REGION }}"
         rules:
             
           - proto: tcp
@@ -130,7 +102,6 @@
         django_sg_id: "{{ Django_sg.group_id }}"
         mysql_sg_id: "{{ Mysql_sg.group_id }}"
         mailhog_sg_id: "{{ Mailhog_sg.group_id }}"
-        nginx_sg_id: "{{ Nginx_sg.group_id | default('') }}"
         
           
 

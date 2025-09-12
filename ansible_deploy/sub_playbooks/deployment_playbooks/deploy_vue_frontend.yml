@@ -1,39 +1,18 @@
 ---
 - name: Deploy the vue frontend component of the app
-  hosts: vue_servers
+  hosts: vue_servers[0]
   vars_files:
     - ../vars/frontend_variables.yml
+  vars:
+    vue_app_path: /home/ubuntu/myretirement
+    APP_HOST: hostvars['localhost'].django_host_private_ip
   tasks:
-  
-    - name: Clone git repo of Vue frontend
-      block:
-
-        - name: Write decrypted private key to temporary file
-          copy:
-            content: "{{ github_frontend_priv_key }}"
-            dest: /tmp/github_frontend_key
-            mode: '0600'
-
-        - name: Clone private repo
-          git:
-            repo: 'git@github.com:alexsfa/myretirement_gui.git'
-            dest: /home/ubuntu/myretirement
-            key_file: /tmp/github_frontend_key
-            version: main
-            force: yes
-            accept_hostkey: yes
-
-      always:
-        - name: Remove temporary private key
-          file:
-            path: /tmp/github_frontend_key
-            state: absent
   
     # Vite uses the development mode by default, so it excepts a .env file with the development postfix
     - name: Create .env and enter the VITE_API_URL
       ansible.builtin.lineinfile:
-        path: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement/.env.development',
-                                                          '/home/ubuntu/myretirement/.env.production') }}"
+        path: "{{ hostvars['localhost'].dev_environment | ternary(vue_app_path ~'/.env.development',
+                                                          vue_app_path ~'/.env.production') }}"
         line: "{{ hostvars['localhost'].dev_environment | ternary('VITE_API_URL='~ hostvars['localhost'].vue_host_public_ip,
                                                           'VITE_API_URL=/api/') }}"
         create: yes
@@ -42,7 +21,7 @@
       # Vite dev server runs in browser so it needs the django host's public IP as VITE_API_TARGET
     - name: Enter VITE_DEV_HOST and VITE_API_TARGET on the .env.dev
       ansible.builtin.blockinfile:
-        path: '/home/ubuntu/myretirement/.env.development'
+        path: '{{ vue_app_path }}/.env.development'
         block: |
           VITE_DEV_HOST={{ hostvars['localhost']['vue_host_public_ip'] }}
           VITE_API_TARGET=http://{{ hostvars['localhost'].django_host_private_ip }}:8000 
@@ -57,20 +36,64 @@
         
     - name: Install Vue app dependencies from package.json
       community.general.npm:
-        path: /home/ubuntu/myretirement
+        path: "{{ vue_app_path }}"
         
-    - name: Check if Vue frontend server is running
-      ansible.builtin.shell: "lsof -i :5173"
-      register: vue_port
-      ignore_errors: yes
+    - name: Start the VITE DEV SERVER (for dev environment)
+      block:
+      
+        - name: Check if Vue frontend server is running
+          ansible.builtin.shell: "lsof -i :5173"
+          register: vue_port
+          ignore_errors: yes
 
-    - name: Start frontend services 
-      ansible.builtin.shell: npm run dev -- --host 0.0.0.0 --port 5173 --mode development
-      args:
-        chdir: /home/ubuntu/myretirement
-      become: yes
-      become_user: ubuntu
-      async: 3600   
-      poll: 0
-      when: vue_port.rc != 0 
+        - name: Start frontend services 
+          ansible.builtin.shell: npm run dev -- --host 0.0.0.0 --port 5173 --mode development
+          args:
+            chdir: "{{ vue_app_path }}"
+          become: yes
+          become_user: ubuntu
+          async: 3600   
+          poll: 0
+          when: vue_port.rc != 0 
+        
+      when: hostvars['localhost'].dev_environment | bool
+      
+    - name: Build the static files of the Vue app (for prod environment)
+      block:
+
+        - name: Install dependencies for the build static files
+          community.general.npm:
+            production: no # for build, we want to install all dependencies, not only production dependencies
+            path: "{{ vue_app_path }}"
+            state: present
+            
+        - name: Run Vue build
+          command: npm run build
+          args:
+            chdir: /home/ubuntu/myretirement
+            
+        - name: Fix permissions for Nginx access to frontend dist
+          become: yes
+          block:
+            - ansible.builtin.file:
+                path: /home/ubuntu
+                state: directory
+                owner: ubuntu
+                group: ubuntu
+                mode: '0711' # executable for ubuntu
+            - ansible.builtin.file:
+                path: /home/ubuntu/myretirement
+                state: directory
+                owner: ubuntu
+                group: ubuntu
+                mode: '0755' # full access on ubuntu
+            - ansible.builtin.file:
+                path: /home/ubuntu/myretirement/dist
+                state: directory
+                owner: ubuntu
+                group: www-data
+                mode: '0755' # full access on nginx's group to retrieve the static files
+                recurse: yes
+             
+      when: not hostvars['localhost'].dev_environment
   

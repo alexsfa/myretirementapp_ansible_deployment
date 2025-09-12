@@ -2,8 +2,18 @@
 - name: Deploy the Django API component of the app
   hosts: django_servers
   vars_files:
-  - ../vars/backend_variables.yml
-  - ../vars/db_credentials.yml
+    - ../vars/backend_variables.yml
+    - ../vars/db_credentials.yml
+  vars:
+    dev_environment: "{{ hostvars['localhost'].dev_environment | bool }}"
+    virtualenv_name: "/py"
+    api_app_path: "/home/ubuntu/myretirement_api"
+    mysql_host_private_ip: "{{ hostvars['localhost'].mysql_host_private_ip }}"
+    mailhog_host_private_ip: "{{ hostvars['localhost'].mailhog_host_private_ip }}"
+    vue_host_private_ip: "{{ hostvars['localhost'].vue_host_private_ip }}"
+    django_host_private_ip: "{{ hostvars['localhost'].django_host_private_ip }}"
+    django_host_public_ip:  "{{ hostvars['localhost'].django_host_public_ip }}"
+    vue_host_public_ip: "{{ hostvars['localhost'].vue_host_public_ip }}"
   tasks:
   
   - name: Clone git repo of Django API backend
@@ -18,7 +28,7 @@
       - name: Clone private repo
         git:
           repo: 'git@github.com:alexsfa/myretirement_api.git'
-          dest: /home/ubuntu/myretirement_api
+          dest: "{{ api_app_path }}"
           key_file: /tmp/github_backend_key
           version: main
           force: yes
@@ -33,48 +43,50 @@
   - name: Install Python packages from requirements.txt
     become: yes
     ansible.builtin.pip:
-      requirements: /home/ubuntu/myretirement_api/requirements.txt
-      virtualenv: /py            
+      requirements: "{{ api_app_path }}/requirements.txt"
+      virtualenv: "{{ virtualenv_name }}"          
       virtualenv_python: python3  
     
   - name: Install Python packages from requirements.dev.txt
     become: yes
     ansible.builtin.pip:
-      requirements: /home/ubuntu/myretirement_api/requirements.dev.txt
-      virtualenv: /py            
+      requirements: "{{ api_app_path }}/requirements.dev.txt"
+      virtualenv: "{{ virtualenv_name }}"            
       virtualenv_python: python3
-    when: hostvars['localhost'].dev_environment | bool
+    when: dev_environment
           
   - name: Create .env file
     ansible.builtin.template:
       src: ../templates/backend_env_vars.j2
-      dest: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement_api/app/.env.dev',
-                                                          '/home/ubuntu/myretirement_api/app/.env.prod') }}"
+      dest: "{{ dev_environment | ternary(api_app_path ~ '/app/.env.dev',
+                                  api_app_path ~ '/app/.env.prod') }}"
       mode: '0600'
                                                           
   - name: Add mailhog host's ip and port in the .env file
     ansible.builtin.blockinfile:
-      path: "{{ hostvars['localhost'].dev_environment | ternary('/home/ubuntu/myretirement_api/app/.env.dev',
-                                                          '/home/ubuntu/myretirement_api/app/.env.prod') }}"
+      path: "{{ dev_environment | ternary(api_app_path ~ '/app/.env.dev',
+                                          api_app_path ~ '/app/.env.prod') }}"
       block: |
-        DB_HOST={{ hostvars['localhost'].mysql_host_private_ip }}
-        EMAIL_HOST={{ hostvars['localhost'].mailhog_host_private_ip }}
+        DB_HOST={{ mysql_host_private_ip }}
+        EMAIL_HOST={{ mailhog_host_private_ip }}
         EMAIL_PORT=1025
-        ALLOWED_HOSTS={{ hostvars['localhost'].vue_host_private_ip }},{{ hostvars['localhost'].django_host_private_ip }},{{ hostvars['localhost'].django_host_public_ip }},localhost,127.0.0.1
-        DEBUG=1
-        CORS_ALLOWED_ORIGINS={{ hostvars['localhost'].vue_host_public_ip }}
-        
-      
+        ALLOWED_HOSTS={{ (dev_environment | bool)
+                        | ternary(
+                            vue_host_private_ip ~ ',' ~ django_host_private_ip ~ ',localhost,127.0.0.1' ~ django_host_public_ip,
+                             'myretirement.click'
+                          ) }}
+        DEBUG={{ dev_environment | ternary(1, 0) }}
+        CORS_ALLOWED_ORIGINS={{ vue_host_public_ip }}
           
   - name: Run Django wait_for_db command
     ansible.builtin.command:
-      cmd: /py/bin/python manage.py wait_for_db
-      chdir: /home/ubuntu/myretirement_api/app
+      cmd: "{{ virtualenv_name }}/bin/python manage.py wait_for_db"
+      chdir: "{{ api_app_path }}/app"
       
   - name: Load migrations in the database
     ansible.builtin.command:
-      cmd: /py/bin/python manage.py migrate
-      chdir: /home/ubuntu/myretirement_api/app
+      cmd: "{{ virtualenv_name }}/bin/python manage.py migrate"
+      chdir: "{{ api_app_path }}/app"
       
   - name: Create script to ensure that Django superuser and employee exist
     copy:
@@ -106,22 +118,70 @@
         
   
   - name: Create Django superuser and employee with script
-    command: /py/bin/python /tmp/create_superuser.py
+    command: "{{ virtualenv_name }}/bin/python /tmp/create_superuser.py"
     args:
-      chdir: /home/ubuntu/myretirement_api/app
+      chdir: "{{ api_app_path }}/app"
       
-  - name: Check if Django API server is running
-    ansible.builtin.shell: "lsof -i :8000"
-    register: django_port
-    ignore_errors: yes
+  - name: Deploy Django API server (for development)
+    block:    
       
-  - name: Run the Django API server
-    command: /py/bin/python manage.py runserver 0.0.0.0:8000
-    args:
-      chdir: /home/ubuntu/myretirement_api/app
-    async: 3600   
-    poll: 0
-    when: django_port.rc != 0
+      - name: Check if Django API is running
+        ansible.builtin.shell: "lsof -i :8000"
+        register: django_port
+        ignore_errors: yes
+      
+      - name: Run the Django API server
+        command: "{{ virtualenv_name }}/bin/python manage.py runserver 0.0.0.0:8000"
+        args:
+          chdir: "{{ api_app_path }}/app"
+        async: 3600   
+        poll: 0
+        when: django_port.rc != 0
+        
+    when: dev_environment
+  
+  - name: Deploy Django API server (for development)
+    block:
     
+      - name: Deploy uWSGI systemd service from template
+        ansible.builtin.template:
+          src: ../templates/uwsgi_myretirement.service.j2
+          dest: /etc/systemd/system/uwsgi_myretirement.service
+          owner: root
+          group: root
+          mode: '0644'
+        become: yes
+        
+      - name: Create uwsgi.ini file
+        ansible.builtin.copy:
+          dest: "{{ api_app_path }}/app/uwsgi.ini"
+          content: |
+            [uwsgi]
+            http = :9000
+            chdir = {{ api_app_path }}/app
+            module = myretirementapi.wsgi:application
+            home = {{ virtualenv_name }}
+            master = true
+            workers = 4
+            disable-logging = true
+            die-on-term = true
+            logto = /home/ubuntu/myretirement_api/app/uwsgi.log
+          owner: ubuntu
+          group: ubuntu
+          mode: '0644'
+          
+      - name: Reload systemd daemon
+        ansible.builtin.systemd:
+          daemon_reload: yes
+        become: yes
+
+      - name: Enable and start uWSGI service
+        ansible.builtin.systemd:
+          name: uwsgi_myretirement.service
+          enabled: yes
+          state: started
+        become: yes
+       
+    when: not dev_environment
           
     

@@ -15,49 +15,6 @@
           ansible.builtin.command: git --version
           changed_when: false
 
-    - name: Certbot and nginx plugin installation
-      block:
-
-        - name: Install Certbot and Nginx plugin
-          ansible.builtin.apt:
-            name:
-              - certbot
-              - python3-certbot-nginx
-            state: present
-            update_cache: yes
-        
-        - name: Verify Certbot is installed
-          ansible.builtin.command: certbot --version
-          register: certbot_version
-          changed_when: false
-          ignore_errors: yes
-          
-      when: not dev_environment
-
-
-    - name: Certibox nginx plugin verification
-      block:
-
-        - name: Verify Certbot Nginx plugin
-          ansible.builtin.command: certbot plugins
-          register: certbot_plugins
-
-        - name: Show if nginx plugin is available
-          ansible.builtin.debug:
-            msg: "{{ certbot_plugins.stdout_lines | select('search', 'nginx') | list }}"
-
-        - name: Stop nginx if running
-          ansible.builtin.service:
-           name: nginx
-           state: stopped
-
-        - name: Disable nginx from starting at boot
-          ansible.builtin.service:
-            name: nginx
-            enabled: no
-            
-      when: not dev_environment
-
     - name: Docker installation
       block:
 
@@ -111,39 +68,50 @@
           changed_when: false
           failed_when: compose_version.rc != 0
     
-    - name: Create a Docker volume for the ssl certificate
-      docker_volume:
-        name: ssl_certificate
-        driver: local
-        state: present
-        
-      # synchronize module instead of copy helps preserve the symlink of the directory
-      # certbot needs the contents of /etc/letsencrypt/live/<domain>/*.pem to know the current version of the cert
-    - name: Copy files directly to Docker volume
-      synchronize:
-        src: ../../ssl_certificate/
-        dest: /var/lib/docker/volumes/ssl_certificate/_data/
-        recursive: yes
-        rsync_opts:
-          - "-l" # preserve symlinks
-          
-    - name: Ensure correct ownership of Docker volume files
-      file:
-        path: /var/lib/docker/volumes/ssl_certificate/_data/
-        owner: root
-        group: root
-        recurse: yes
-
-    - name: Fix private key permissions
-      file:
-        path: /var/lib/docker/volumes/ssl_certificate/_data/live/myretirement.click/privkey.pem
-        mode: '0600'
+    - name: Save the ssl certificate into the Docker environment
+      block:
     
-    - name: Create a Docker network
-      community.docker.docker_network:
-        name: myretirement_docker_network
-        state: present
-        driver: bridge
+        - name: Create a Docker volume for the ssl certificate
+          docker_volume:
+            name: ssl_certificate
+            driver: local
+            state: present
+          
+          # synchronize module instead of copy helps preserve the symlink of the directory
+          # certbot needs the contents of /etc/letsencrypt/live/<domain>/*.pem to know the current version of the cert
+        - name: Copy files directly to Docker volume
+          synchronize:
+            src: ../ssl_certificate/./
+            dest: /var/lib/docker/volumes/ssl_certificate/_data/
+            recursive: yes
+            rsync_opts:
+              - "-l" # preserve symlinks
+              
+        - name: Recreate Let's Encrypt symlinks
+          file:
+            src: "../../archive/myretirement.click/{{ item.archive }}"
+            dest: "/var/lib/docker/volumes/ssl_certificate/_data/live/myretirement.click/{{ item.live }}"
+            state: link
+          loop:
+            - { archive: "cert1.pem", live: "cert.pem" }
+            - { archive: "chain1.pem", live: "chain.pem" }
+            - { archive: "fullchain1.pem", live: "fullchain.pem" }
+            - { archive: "privkey1.pem", live: "privkey.pem" }
+          
+        - name: Ensure correct ownership of Docker volume files
+          file:
+            path: /var/lib/docker/volumes/ssl_certificate/_data/
+            owner: root
+            group: root
+            recurse: yes
+
+        - name: Fix private key permissions
+          file:
+            path: /var/lib/docker/volumes/ssl_certificate/_data/live/myretirement.click/privkey.pem
+            mode: '0600'
+            
+      when: not dev_environment
+    
         
     
 

@@ -2,6 +2,12 @@
 - name: Install all the prerequirements on the Vue host
   hosts: vue_servers
   become: yes
+  vars_files:
+    - ../vars/frontend_variables.yml
+  vars:
+    vue_app_path: /home/ubuntu/myretirement
+    APP_HOST: "{{ hostvars['localhost'].django_host_private_ip }}"
+    APP_PORT: 9000
   tasks:
     
     - name: Update apt
@@ -39,10 +45,50 @@
           command: npm -v
           changed_when: false
           
-        - name: Verify npm installation
-          ansible.builtin.command: npm -v
-          changed_when: false
+    - name: Clone git repo of Vue frontend
+      become: yes
+      become_user: ubuntu
+      block:
+      
+        - name: Write decrypted private key to temporary file
+          copy:
+            content: "{{ github_frontend_priv_key }}"
+            dest: /tmp/github_frontend_key
+            mode: '0600'
+
+        - name: Clone private repo
+          git:
+            repo: 'git@github.com:alexsfa/myretirement_gui.git'
+            dest: "{{ vue_app_path }}"
+            key_file: /tmp/github_frontend_key
+            version: main
+            force: yes
+            accept_hostkey: yes
+
+      always:
+        - name: Remove temporary private key
+          file:
+            path: /tmp/github_frontend_key
+            state: absent
+    
+    - name: Configure Nginx (only for prod environment)
+      include_tasks: ./config_nginx_tasks.yml
+      when: not hostvars['localhost'].dev_environment
+      
+  handlers: 
+    - name: Test nginx configuration
+      ansible.builtin.command: nginx -t
+      register: nginx_test
+      ignore_errors: yes
+
+    - name: Fail if nginx config test fails
+      ansible.builtin.fail:
+        msg: "Nginx configuration is invalid"
+      when: nginx_test.rc != 0
+  
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded # reload ensures that nginx reloads its conf when necessary
+
           
-    
-            
-    

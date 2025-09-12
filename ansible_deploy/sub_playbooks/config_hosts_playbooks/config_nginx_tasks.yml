@@ -1,0 +1,65 @@
+---   
+  - name: Install Nginx
+    block:     
+    
+      - name: Install Nginx on ubuntu
+        apt:
+          name: nginx
+          state: present
+            
+      - name: Ensure Nginx is running and enabled
+        service:
+          name: nginx
+          state: started
+          enabled: yes
+        
+  - name: 
+    block:
+    
+      - name: Copy files directly to Docker volume
+        synchronize:
+          src: ../../../ssl_certificate/./
+          dest: /etc/letsencrypt/.
+          recursive: yes
+          rsync_opts:
+               "-l" # preserve symlinks
+               
+      - name: Recreate Let's Encrypt symlinks
+        file:
+          src: "../../archive/myretirement.click/{{ item.archive }}"
+          dest: "/etc/letsencrypt/live/myretirement.click/{{ item.live }}"
+          state: link
+        loop:
+          - { archive: "cert1.pem", live: "cert.pem" }
+          - { archive: "chain1.pem", live: "chain.pem" }
+          - { archive: "fullchain1.pem", live: "fullchain.pem" }
+          - { archive: "privkey1.pem", live: "privkey.pem" }
+          
+  - name: Configure Nginx with the repo's template
+    block:    
+      - name: Add the path of the Vue static files in conf file of nginx
+        ansible.builtin.lineinfile:
+          path: /home/ubuntu/myretirement/proxy/default.conf.tpl
+          regexp: '^(\s+)?root\s+'
+          line: "    root {{vue_app_path }}/dist;" 
+          state: present
+    
+      - name: Add the proxy_pass in conf file of nginx
+        ansible.builtin.lineinfile:
+          path: /home/ubuntu/myretirement/proxy/default.conf.tpl
+          regexp: '^(\s+)?proxy_pass\s+'
+          line: "        proxy_pass http://{{ APP_HOST }}:{{ APP_PORT }}/;" 
+          state: present
+      
+      - name: Copy conf file to etc/nginx
+        ansible.builtin.command:
+          cmd: mv /home/ubuntu/myretirement/proxy/default.conf.tpl /etc/nginx/conf.d/default.conf
+      
+      - name: Copy conf file to etc/nginx
+        ansible.builtin.command:
+          cmd: mv /home/ubuntu/myretirement/proxy/uwsgi_params /etc/nginx/uwsgi_params
+    
+    notify:
+      - Test nginx configuration
+      - Fail if nginx config test fails
+      - Reload nginx

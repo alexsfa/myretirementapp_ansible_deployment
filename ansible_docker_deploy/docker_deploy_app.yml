@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: no
   environment:
-    AWS_DEFAULT_REGION: us-east-1d
+    AWS_DEFAULT_REGION: us-east-1
   vars_files:
     - ./sub_playbooks/vars/aws_credentials.yml
   tasks:
@@ -17,19 +17,13 @@
   handlers:
     - name: Reconnect after adding user to docker group
       meta: reset_connection
-
-- name: Deploy frontend on EC2
-  hosts: docker_server
-  vars_files:
-    - ./sub_playbooks/vars/deploy_frontend_vars.yml
-  tasks:
-    - import_tasks: ./sub_playbooks/deploy_frontend.yml       
-
-- name: Deploy backend on Docker host
+    
+- name: Deploy app with Docker
   hosts: docker_server
   vars_files:
     - ./sub_playbooks/vars/deploy_backend_vars.yml
     - ./sub_playbooks/vars/aws_credentials.yml
+    - ./sub_playbooks/vars/deploy_frontend_vars.yml
   tasks:
-    - import_tasks: ./sub_playbooks/deploy_backend.yml
+    - import_tasks: ./sub_playbooks/deploy_app.yml
    
