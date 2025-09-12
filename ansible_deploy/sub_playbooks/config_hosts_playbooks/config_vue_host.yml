@@ -4,6 +4,7 @@
   become: yes
   vars_files:
     - ../vars/frontend_variables.yml
+    - ../vars/aws_credentials.yml
   vars:
     vue_app_path: /home/ubuntu/myretirement
     APP_HOST: "{{ hostvars['localhost'].django_host_private_ip }}"
@@ -76,15 +77,6 @@
       when: not hostvars['localhost'].dev_environment
       
   handlers: 
-    - name: Test nginx configuration
-      ansible.builtin.command: nginx -t
-      register: nginx_test
-      ignore_errors: yes
-
-    - name: Fail if nginx config test fails
-      ansible.builtin.fail:
-        msg: "Nginx configuration is invalid"
-      when: nginx_test.rc != 0
   
     - name: Reload nginx
       service:

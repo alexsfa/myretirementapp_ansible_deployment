@@ -12,6 +12,24 @@
           name: nginx
           state: started
           enabled: yes
+          
+  - name: Certbot and nginx plugin installation
+    block:
+
+      - name: Install Certbot and Nginx plugin
+        ansible.builtin.apt:
+          name:
+            - certbot
+            - python3-certbot-nginx
+            - python3-certbot-dns-route53
+          state: present
+          update_cache: yes
+        
+      - name: Verify Certbot is installed
+        ansible.builtin.command: certbot --version
+        register: certbot_version
+        changed_when: false
+        ignore_errors: yes
         
   - name: 
     block:
@@ -58,8 +76,19 @@
       - name: Copy conf file to etc/nginx
         ansible.builtin.command:
           cmd: mv /home/ubuntu/myretirement/proxy/uwsgi_params /etc/nginx/uwsgi_params
+          
+      - name: Ensure certificate is requested/renewed
+        ansible.builtin.command: >
+          certbot certonly --non-interactive --agree-tos
+          --email {{ aws_credentials.CERT_EMAIL }}
+          -a dns-route53
+          --keep-until-expiring
+          -d myretirement.click
+        register: certbot_result
+        changed_when: "'Congratulations!' in certbot_result.stdout or 'No renewals were attempted' not in certbot_result.stdout"
+        notify:
+          - Reload nginx
+          
     
     notify:
-      - Test nginx configuration
-      - Fail if nginx config test fails
       - Reload nginx

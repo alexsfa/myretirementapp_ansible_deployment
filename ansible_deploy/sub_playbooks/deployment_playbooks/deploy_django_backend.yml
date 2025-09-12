@@ -72,7 +72,7 @@
         EMAIL_PORT=1025
         ALLOWED_HOSTS={{ (dev_environment | bool)
                         | ternary(
-                            vue_host_private_ip ~ ',' ~ django_host_private_ip ~ ',localhost,127.0.0.1' ~ django_host_public_ip,
+                            vue_host_private_ip ~ ',' ~ django_host_private_ip ~ ',localhost,127.0.0.1,' ~ django_host_public_ip,
                              'myretirement.click'
                           ) }}
         DEBUG={{ dev_environment | ternary(1, 0) }}
