@@ -15,7 +15,7 @@ By default, the playbooks deploy a production-ready environment which creates:
 
 By declaring the dev_environment environment variable as True, the playbooks deploy a development environment that is accessible only to the user who initiated the deployment.
 
-----
+## Personalized configuration
 In order to use any of the production environments, you will need to use certbot for requesting a file and add the returned content on a myretirementapp_ansible_deployment/ssl_certificate directory.  
 
 For a personalized and smooth setup, please provide your credentials according the scenario you want to use. 
@@ -47,6 +47,9 @@ env_vars:
   DJANGO_EMPLOYEE_NAME: <your_django_employee_name>
   DJANGO_EMPLOYEE_PASSWORD: <your_django_employee_password>
   DJANGO_EMPLOYEE_EMAIL: <your_django_employee_email>
+  DJANGO_CUSTOMER_NAME: <your_django_customer_name>
+  DJANGO_CUSTOMER_PASSWORD: <your_django_customer_password>
+  DJANGO_CUSTOMER_EMAIL: <your_django_customer_email>
 ```
 
 **frontend_variables.yml file**
@@ -131,6 +134,22 @@ backend_prod_env_vars:
 github_frontend_priv_key: |
   <myretirement_gui_github_key>
 ```
+
+## Run the Playbooks
+After you added the files needed for the playrun, you can run each scenario with the following commands.
+
+### Scenario A
+```bash
+ansible-playbook deploy_app.yml
+```
+
+### Scenario B
+```bash
+ansible-playbook docker_deploy_app.yml
+```
+
+
+
   
 
 
