@@ -136,7 +136,7 @@ github_frontend_priv_key: |
 ```
 
 ## Run the Playbooks
-After you added the files needed for the playrun, you can run each scenario with the following commands.
+After you 've added the required files for the playruns, you can run each scenario with the following commands.
 
 ### Scenario A
 ```bash
