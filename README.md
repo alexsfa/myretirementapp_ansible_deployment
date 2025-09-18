@@ -104,6 +104,9 @@ backend_dev_env_vars:
   DJANGO_EMPLOYEE_NAME: <your_django_employee_name>
   DJANGO_EMPLOYEE_PASSWORD: <your_django_employee_password>
   DJANGO_EMPLOYEE_EMAIL: <your_django_employee_email>
+  DJANGO_CUSTOMER_NAME: <your_django_customer_name>
+  DJANGO_CUSTOMER_PASSWORD: <your_django_customer_password>
+  DJANGO_CUSTOMER_EMAIL: <your_django_customer_email>
   EMAIL_PORT: <your_mailhog_port>
 
 backend_prod_env_vars:
@@ -117,6 +120,9 @@ backend_prod_env_vars:
   DJANGO_EMPLOYEE_NAME: <your_django_employee_name>
   DJANGO_EMPLOYEE_PASSWORD: <your_django_employee_password>
   DJANGO_EMPLOYEE_EMAIL: <your_django_employee_email>
+  DJANGO_CUSTOMER_NAME: <your_django_customer_name>
+  DJANGO_CUSTOMER_PASSWORD: <your_django_customer_password>
+  DJANGO_CUSTOMER_EMAIL: <your_django_customer_email>
   EMAIL_PORT: <your_mailhog_port>
 ```
 
