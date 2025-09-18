@@ -24,10 +24,9 @@
           instance_type: t2.micro
           count: 1
           region: "{{ AWS_DEFAULT_REGION }}"
-          vpc_subnet_id: vpc-0a939c19442ae9cf8
           network_interfaces:
             - device_index: 0
-              subnet_id: subnet-045e46c91af1579fc
+              subnet_id: "{{ network_config.subnet_id }}"
               groups:
                - "{{ vue_sg_id }}"
               assign_public_ip: true
@@ -82,7 +81,7 @@
           count: 1
           network_interfaces:
             - device_index: 0
-              subnet_id: subnet-045e46c91af1579fc
+              subnet_id: "{{ network_config.subnet_id }}"
               groups:
                 - "{{ django_sg_id }}"
               assign_public_ip: true
@@ -136,7 +135,7 @@
           count: 1
           network_interfaces:
             - device_index: 0
-              subnet_id: subnet-045e46c91af1579fc
+              subnet_id: "{{ network_config.subnet_id }}"
               groups:
                 - "{{ mysql_sg_id }}"
               assign_public_ip: true
@@ -190,7 +189,7 @@
           count: 1
           network_interfaces:
             - device_index: 0
-              subnet_id: subnet-045e46c91af1579fc
+              subnet_id: "{{ network_config.subnet_id }}"
               groups:
                 - "{{ mailhog_sg_id }}"
               assign_public_ip: true

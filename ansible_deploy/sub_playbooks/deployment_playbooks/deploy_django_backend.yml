@@ -116,7 +116,14 @@
         if not User.objects.filter(email=employee_email).exists(): 
             User.objects.create_user(email=employee_email, name=employee_name, password=employee_password, role='employee')
         
-  
+        customer_email = os.getenv('DJANGO_CUSTOMER_EMAIL')
+        customer_password = os.getenv('DJANGO_CUSTOMER_PASSWORD')
+        customer_name = os.getenv('DJANGO_CUSTOMER_NAME')
+        User = get_user_model()
+        if not User.objects.filter(email=customer_email).exists():
+            User.objects.create_user(email=customer_email, name=customer_name, password=customer_password, role='customer')
+ 
+
   - name: Create Django superuser and employee with script
     command: "{{ virtualenv_name }}/bin/python /tmp/create_superuser.py"
     args:
