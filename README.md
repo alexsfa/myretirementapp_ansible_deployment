@@ -96,11 +96,11 @@ github_backend_priv_key: |
   <myretirement_api_github_key>
 
 backend_dev_env_vars:
+  MYSQL_ROOT_PASS: <your_dev_db_root_pass>
   DB_HOST: <your_dev_db_host>
   DB_NAME: <your_dev_db_name>
   DB_USER: <your_dev_db_user>
   DB_PASS: <your_dev_db_password>
-  ROOT_PASS: <your_dev_db_root_pass>
   DJANGO_SECRET_KEY: <your_django_secret_key>
   DJANGO_SUPERUSER_PASSWORD: <your_django_superuser_password>
   DJANGO_SUPERUSER_EMAIL: <your_django_superuser_email>
@@ -113,7 +113,7 @@ backend_dev_env_vars:
   EMAIL_PORT: <your_mailhog_port>
 
 backend_prod_env_vars:
-  ROOT_PASS: <your_prod_db_root_pass>
+  MYSQL_ROOT_PASS: <your_dev_db_root_pass>
   DB_NAME: <your_prod_db_name>
   DB_USER: <your_prod_db_user>
   DB_PASS: <your_prod_db_password>
